@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTS Monocular Depth Estimation & 3D Point Cloud Demo</title>
+    <title>BTS Monocular Depth Estimation & Live 3D Webcam Demo</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,14 +21,18 @@
         <div class="logo-group">
             <div class="logo-badge">BTS 3D</div>
             <div>
-                <div class="logo-title">Monocular Depth Estimation & 3D Point Cloud</div>
-                <div class="logo-subtitle">NeurIPS 2019 Jin Han Lee Reproducibility • NYUv2 & KITTI Multi-Domain Engine</div>
+                <div class="logo-title">Monocular Depth Estimation & Live 3D Webcam</div>
+                <div class="logo-subtitle">NeurIPS 2019 Jin Han Lee Reproducibility • NYUv2 & KITTI Multi-Domain Architecture</div>
             </div>
         </div>
         <div class="header-actions">
+            <div class="domain-pill" id="domainPill">
+                <span class="domain-dot"></span>
+                <span id="activeDomainText">NYUv2 (Trong Nhà • 10m)</span>
+            </div>
             <div class="status-pill" id="engineStatus">
                 <div class="status-dot"></div>
-                <span>PyTorch Engine Ready (CUDA)</span>
+                <span id="deviceText">PyTorch GPU (CUDA)</span>
             </div>
         </div>
     </header>
@@ -43,29 +47,57 @@
                     <i class="fa-solid fa-microchip"></i>
                     <span>Cấu hình Mô hình (Domain)</span>
                 </div>
-                <div class="form-group">
-                    <label for="modelPresetSelect">Môi trường Huấn luyện</label>
-                    <select id="modelPresetSelect">
-                        <option value="nyu" selected>🏠 NYU Depth V2 (Indoor - Max 10m)</option>
-                        <option value="kitti">🚗 KITTI Benchmark (Outdoor - Max 80m)</option>
-                    </select>
+                
+                <div class="preset-toggle-group">
+                    <button type="button" class="preset-btn active" id="btnPresetNyu" data-preset="nyu">
+                        <i class="fa-solid fa-house"></i>
+                        <div class="preset-btn-text">
+                            <span class="preset-btn-title">NYUv2 Trong Nhà</span>
+                            <span class="preset-btn-sub">Dải đo: 0 - 10m (Webcam)</span>
+                        </div>
+                    </button>
+                    <button type="button" class="preset-btn" id="btnPresetKitti" data-preset="kitti">
+                        <i class="fa-solid fa-car"></i>
+                        <div class="preset-btn-text">
+                            <span class="preset-btn-title">KITTI Ngoài Trời</span>
+                            <span class="preset-btn-sub">Dải đo: 0 - 80m (Xe tự hành)</span>
+                        </div>
+                    </button>
                 </div>
-                <div class="form-group">
+                <input type="hidden" id="modelPresetSelect" value="nyu">
+
+                <div class="ckpt-info-box" id="ckptInfoBox">
+                    <div class="ckpt-row">
+                        <span class="ckpt-key">Checkpoint:</span>
+                        <span class="ckpt-val" id="ckptFileText">nyu_densenet161_step271k</span>
+                    </div>
+                    <div class="ckpt-row">
+                        <span class="ckpt-key">AbsRel:</span>
+                        <span class="ckpt-val text-green" id="ckptMetricText">0.10967 (Peak)</span>
+                    </div>
+                    <div class="ckpt-row">
+                        <span class="ckpt-key">Max Range:</span>
+                        <span class="ckpt-val" id="ckptRangeText">10.0 mét</span>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 14px;">
                     <label for="focalInput">Tiêu cự Camera (Focal Length fx)</label>
-                    <input type="number" id="focalInput" value="519.0" step="1.0" min="50" max="2000">
+                    <input type="number" id="focalInput" value="519.0" step="1.0" min="50" max="2500">
+                    <div class="field-hint" id="focalHint">NYUv2 khuyến nghị fx=519 | KITTI khuyến nghị fx=715</div>
                 </div>
             </div>
 
             <!-- 2. Image Input & Upload -->
-            <div class="card">
+            <div class="card" id="uploadCard">
                 <div class="card-title">
                     <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <span>Đầu vào Ảnh 2D</span>
+                    <span>Tải Ảnh Lên Thử Nghiệm</span>
                 </div>
                 <div class="dropzone" id="dropzone">
                     <i class="fa-solid fa-image dropzone-icon"></i>
                     <div class="dropzone-text">Kéo thả ảnh hoặc Nhấn để chọn</div>
-                    <div class="dropzone-sub">Hỗ trợ JPG, PNG, WEBP (Tự động tiền xử lý)</div>
+                    <div class="dropzone-sub">Hỗ trợ JPG, PNG, WEBP (Auto Preprocessing)</div>
                     <input type="file" id="fileInput" accept="image/*" style="display: none;">
                 </div>
             </div>
@@ -79,18 +111,18 @@
                 <div class="form-group">
                     <label for="colormapSelect">Bảng màu Độ sâu (Colormap)</label>
                     <select id="colormapSelect">
-                        <option value="plasma" selected>Plasma (Chuẩn học thuật)</option>
-                        <option value="turbo">Turbo (Độ tương phản cao)</option>
-                        <option value="viridis">Viridis (Khoa học)</option>
-                        <option value="magma">Magma (Tối / Nóng)</option>
-                        <option value="inferno">Inferno</option>
+                        <option value="turbo" selected>Turbo (Độ tương phản cao & chi tiết)</option>
+                        <option value="plasma">Plasma (Chuẩn học thuật NeurIPS)</option>
+                        <option value="viridis">Viridis (Chuẩn thị giác máy tính)</option>
+                        <option value="magma">Magma (Tối / Năng lượng nhiệt)</option>
+                        <option value="inferno">Inferno (Rực rỡ)</option>
                         <option value="jet">Jet (Cầu vồng cổ điển)</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Chế độ Màu 3D</label>
+                    <label>Chế độ Màu Điểm 3D</label>
                     <select id="colorModeSelect">
-                        <option value="rgb" selected>Màu RGB thực tế từ ảnh</option>
+                        <option value="rgb" selected>Màu RGB chân thực từ hình ảnh</option>
                         <option value="depth">Màu bản đồ độ sâu (Colormap)</option>
                     </select>
                 </div>
@@ -104,8 +136,8 @@
                 <div class="form-group">
                     <label>Mật độ Điểm 3D (Density)</label>
                     <select id="gridDensitySelect">
-                        <option value="120">Nhanh (120x90 - Mượt mà)</option>
-                        <option value="160" selected>Chuẩn (160x120 - Khuyên dùng)</option>
+                        <option value="120">Nhanh (120x90 - Siêu nhẹ)</option>
+                        <option value="160" selected>Chuẩn (160x120 - Tối ưu nhất)</option>
                         <option value="240">Cao (240x180 - Chi tiết sắc nét)</option>
                     </select>
                 </div>
@@ -136,24 +168,29 @@
         <main class="view-container">
             <!-- Nav Tabs -->
             <div class="nav-tabs">
-                <button class="tab-btn active" data-tab="2d-tab">
-                    <i class="fa-solid fa-columns"></i>
-                    <span>So sánh 2D (RGB vs Depth)</span>
+                <button class="tab-btn active" data-tab="upload-tab" id="tabBtnUpload">
+                    <i class="fa-solid fa-images"></i>
+                    <span>Ảnh Tải Lên & Mẫu Thử</span>
                 </button>
-                <button class="tab-btn" data-tab="3d-tab">
+                <button class="tab-btn" data-tab="webcam-tab" id="tabBtnWebcam">
+                    <span class="live-dot-mini"></span>
+                    <i class="fa-solid fa-video"></i>
+                    <span>Live Webcam 3D Thời Gian Thực</span>
+                </button>
+                <button class="tab-btn" data-tab="3d-tab" id="tabBtn3D">
                     <i class="fa-solid fa-cube"></i>
-                    <span>Không gian 3D Point Cloud 360°</span>
+                    <span>Không Gian 3D Point Cloud 360°</span>
                 </button>
             </div>
 
-            <!-- TAB 1: 2D Comparison -->
-            <div id="2d-tab" class="tab-content active">
+            <!-- TAB 1: Upload & 2D Comparison -->
+            <div id="upload-tab" class="tab-content active">
                 <div class="comparison-grid">
                     <!-- RGB Panel -->
                     <div class="img-panel">
                         <div class="panel-header">
-                            <span><i class="fa-solid fa-camera" style="color: var(--accent-cyan); margin-right: 6px;"></i>Ảnh Gốc (RGB Input)</span>
-                            <span id="rgbDim" style="color: var(--text-muted); font-size: 11px;">640 x 480</span>
+                            <span><i class="fa-solid fa-camera text-cyan"></i> Ảnh Gốc (RGB Input)</span>
+                            <span id="rgbDim" class="badge-sub">640 x 480</span>
                         </div>
                         <div class="img-viewport" id="rgbViewport">
                             <img id="rgbImg" src="" alt="RGB Preview">
@@ -162,8 +199,8 @@
                     <!-- Depth Panel -->
                     <div class="img-panel">
                         <div class="panel-header">
-                            <span><i class="fa-solid fa-mountain" style="color: var(--accent-blue); margin-right: 6px;"></i>Bản đồ Độ sâu Ước lượng (BTS Prediction)</span>
-                            <span id="inferenceSpeedPill" style="color: var(--accent-green); font-family: 'Fira Code', monospace; font-size: 11px;">0.0 ms</span>
+                            <span><i class="fa-solid fa-layer-group text-blue"></i> Bản đồ Độ sâu Ước lượng (BTS Depth)</span>
+                            <span id="inferenceSpeedPill" class="badge-speed">0.0 ms</span>
                         </div>
                         <div class="img-viewport" id="depthViewport">
                             <img id="depthImg" src="" alt="Depth Preview">
@@ -173,17 +210,108 @@
                 </div>
             </div>
 
-            <!-- TAB 2: 3D Point Cloud Canvas -->
+            <!-- TAB 2: LIVE WEBCAM REAL-TIME DEPTH & 3D -->
+            <div id="webcam-tab" class="tab-content" style="display: none;">
+                <!-- Webcam Control Bar -->
+                <div class="webcam-bar">
+                    <div class="webcam-controls-left">
+                        <button class="btn btn-success" id="btnStartWebcam">
+                            <i class="fa-solid fa-play"></i>
+                            <span>Bật Live Webcam</span>
+                        </button>
+                        <button class="btn btn-danger" id="btnStopWebcam" style="display: none;">
+                            <i class="fa-solid fa-stop"></i>
+                            <span>Dừng Webcam</span>
+                        </button>
+                        <button class="btn btn-freeze" id="btnFreeze3D">
+                            <i class="fa-solid fa-snowflake"></i>
+                            <span>Đóng Băng & Dựng 3D Point Cloud</span>
+                        </button>
+                    </div>
+                    <div class="webcam-hud-right">
+                        <div class="hud-item" title="Tốc độ khung hình">
+                            <span class="hud-label">FPS</span>
+                            <span class="hud-val text-green" id="webcamFps">0.0</span>
+                        </div>
+                        <div class="hud-item" title="Độ trễ suy luận mô hình">
+                            <span class="hud-label">Latency</span>
+                            <span class="hud-val text-cyan" id="webcamLatency">0 ms</span>
+                        </div>
+                        <div class="hud-item highlight" title="Khoảng cách đo được tại hồng tâm trung tâm">
+                            <span class="hud-label">Khoảng Cách Tâm</span>
+                            <span class="hud-val text-gold" id="webcamCenterDist">-- m</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Webcam Viewport Grid -->
+                <div class="comparison-grid" style="margin-top: 14px;">
+                    <!-- Webcam Live Video -->
+                    <div class="img-panel">
+                        <div class="panel-header">
+                            <span class="live-stream-title">
+                                <span class="live-badge-glow">LIVE</span>
+                                <span>Luồng Video Webcam Trực Tiếp</span>
+                            </span>
+                            <span id="webcamResBadge" class="badge-sub">Waiting for Camera...</span>
+                        </div>
+                        <div class="img-viewport webcam-viewport" id="webcamVideoWrapper">
+                            <video id="webcamVideo" autoplay playsinline muted></video>
+                            <canvas id="webcamHiddenCanvas" style="display: none;"></canvas>
+                            <!-- Reticle Target -->
+                            <div class="crosshair" id="webcamCrosshair">
+                                <div class="crosshair-circle"></div>
+                                <div class="crosshair-h"></div>
+                                <div class="crosshair-v"></div>
+                                <div class="crosshair-label" id="crosshairDistLabel">-- m</div>
+                            </div>
+                            <div class="webcam-placeholder" id="webcamPlaceholder">
+                                <i class="fa-solid fa-video-slash" style="font-size: 40px; margin-bottom: 12px; color: var(--text-muted);"></i>
+                                <div>Nhấn <strong>"Bật Live Webcam"</strong> để bắt đầu thử nghiệm độ sâu trực tiếp</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Mô hình sẽ xử lý từng khung hình và đo khoảng cách thực tế</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Webcam Live Depth Output -->
+                    <div class="img-panel">
+                        <div class="panel-header">
+                            <span><i class="fa-solid fa-cubes-stacked text-blue"></i> Bản đồ Độ sâu Thời Gian Thực (Live Depth)</span>
+                            <span id="webcamDepthPill" class="badge-speed">Turbo Colormap</span>
+                        </div>
+                        <div class="img-viewport webcam-viewport" id="webcamDepthWrapper">
+                            <img id="webcamDepthImg" src="" alt="Live Depth Stream" style="display: none;">
+                            <div class="crosshair" id="webcamDepthCrosshair">
+                                <div class="crosshair-circle"></div>
+                                <div class="crosshair-h"></div>
+                                <div class="crosshair-v"></div>
+                            </div>
+                            <div class="webcam-placeholder" id="depthPlaceholder">
+                                <i class="fa-solid fa-radar" style="font-size: 40px; margin-bottom: 12px; color: var(--text-muted);"></i>
+                                <div>Chưa có dữ liệu độ sâu trực tiếp</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: 3D Point Cloud Canvas -->
             <div id="3d-tab" class="tab-content" style="display: none;">
                 <div class="canvas-3d-wrapper">
                     <div class="canvas-overlay-controls">
-                        <button class="canvas-btn" id="resetCamBtn" title="Đặt lại góc nhìn"><i class="fa-solid fa-crosshairs"></i> Reset Góc Nhìn</button>
-                        <button class="canvas-btn" id="autoRotateBtn" title="Tự động xoay 360"><i class="fa-solid fa-arrows-rotate"></i> Tự Động Xoay</button>
-                        <button class="canvas-btn" id="toggleGridBtn" title="Bật/Tắt Lưới Sàn"><i class="fa-solid fa-border-all"></i> Lưới Sàn</button>
+                        <button class="canvas-btn" id="resetCamBtn" title="Đặt lại góc nhìn">
+                            <i class="fa-solid fa-crosshairs"></i> Reset Góc Nhìn
+                        </button>
+                        <button class="canvas-btn" id="autoRotateBtn" title="Tự động xoay 360">
+                            <i class="fa-solid fa-arrows-rotate"></i> Tự Động Xoay
+                        </button>
+                        <button class="canvas-btn" id="toggleGridBtn" title="Bật/Tắt Lưới Sàn">
+                            <i class="fa-solid fa-border-all"></i> Lưới Sàn
+                        </button>
                     </div>
                     <canvas id="canvas3d"></canvas>
                     <div class="canvas-hint">
-                        <i class="fa-solid fa-mouse"></i> Chuột trái: Xoay 360° | Chuột phải: Di chuyển | Cuộn chuột: Phóng to/Thu nhỏ
+                        <i class="fa-solid fa-mouse"></i> Chuột trái: Xoay 360° | Chuột phải: Trượt vị trí | Cuộn chuột: Phóng to/Thu nhỏ
                     </div>
                 </div>
             </div>
@@ -192,27 +320,34 @@
             <div class="stats-strip">
                 <div class="stat-box">
                     <div class="stat-label">Khoảng Cách Gần Nhất</div>
-                    <div class="stat-value" id="minDepthVal">-- m</div>
+                    <div class="stat-value text-cyan" id="minDepthVal">-- m</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Khoảng Cách Xa Nhất</div>
-                    <div class="stat-value" id="maxDepthVal">-- m</div>
+                    <div class="stat-value text-blue" id="maxDepthVal">-- m</div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-label">Khoảng Cách Trung Bình</div>
                     <div class="stat-value" id="meanDepthVal">-- m</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Thời Gian Inference</div>
-                    <div class="stat-value" style="color: var(--accent-green);" id="infTimeVal">-- ms</div>
+                    <div class="stat-label">Thời Gian Suy Luận</div>
+                    <div class="stat-value text-green" id="infTimeVal">-- ms</div>
                 </div>
             </div>
 
             <!-- SAMPLES GALLERY (1-CLICK TEST) -->
             <div class="samples-bar">
-                <div class="card-title" style="margin-bottom: 8px;">
-                    <i class="fa-solid fa-photo-film"></i>
-                    <span>Thư Viện Ảnh Mẫu Thử Nghiệm Nhanh (1-Click Test)</span>
+                <div class="samples-header">
+                    <div class="card-title" style="margin-bottom: 0;">
+                        <i class="fa-solid fa-photo-film"></i>
+                        <span>Thư Viện Ảnh Mẫu Đa Miền (1-Click Test)</span>
+                    </div>
+                    <div class="samples-filter">
+                        <button class="filter-chip active" data-filter="all">Tất cả</button>
+                        <button class="filter-chip" data-filter="nyu">Trong nhà (NYUv2)</button>
+                        <button class="filter-chip" data-filter="kitti">Ngoài trời (KITTI)</button>
+                    </div>
                 </div>
                 <div class="samples-track" id="samplesTrack">
                     <!-- Populated dynamically via JS -->
@@ -224,8 +359,8 @@
     <!-- LOADING SPINNER OVERLAY -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
-        <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">Đang Chạy BTS Inference & Dựng Không Gian 3D...</div>
-        <div style="font-size: 12px; color: var(--text-muted);" id="loadingSubtitle">Xử lý mạng nơ-ron DenseNet161 + Local Planar Guidance</div>
+        <div class="loading-title">Đang Chạy BTS Inference & Dựng Không Gian 3D...</div>
+        <div class="loading-subtitle" id="loadingSubtitle">Xử lý mạng nơ-ron DenseNet161 + Local Planar Guidance</div>
     </div>
 
     <script src="/static/app.js"></script>
