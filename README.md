@@ -20,7 +20,7 @@
 
 This repository provides an independent, reproducible implementation and comparative validation of the BTS (Big-to-Small) monocular depth estimation architecture proposed by Lee et al. (NeurIPS 2019). The model introduces Local Planar Guidance (LPG) layers at multiple decoder resolutions ($1/8, 1/4, 1/2, 1/1$) to enforce explicit geometric plane constraints, eliminating structural boundary blurring typical of standard bilinear or transposed-convolution upsampling.
 
-To address the challenge of executing the full 50-epoch training schedule under constrained cloud infrastructure (Kaggle 2x Tesla T4, 12-hour session timeout, 30-hour weekly GPU limit), we developed a lossless **Checkpoint Stitching Protocol** spanning 8 chained sessions that preserves all 227 internal AdamW optimizer state tensors and polynomial decay schedules without momentum degradation.
+To address the challenge of executing full 50-epoch training schedules under constrained cloud infrastructure (Kaggle 2x Tesla T4, 12-hour session timeout, 30-hour weekly GPU limit), we developed a lossless **Checkpoint Stitching Protocol** spanning chained sessions that preserves all 227 internal AdamW optimizer state tensors and polynomial decay schedules without momentum degradation.
 
 Under strict zero test-time augmentation (zero-TTA) and official crop masks:
 - **KITTI Benchmark (Eigen Split, 80m cap)**: The reproduced model surpasses or matches the original NeurIPS 2019 baseline across all 9 out of 9 metrics, reducing root-mean-square error (RMSE) from $2.798\text{ m}$ to $2.424\text{ m}$ (a reduction of $37.4\text{ cm}$) and improving AbsRel from $0.060$ to $0.05748$.
@@ -28,28 +28,28 @@ Under strict zero test-time augmentation (zero-TTA) and official crop masks:
 
 ---
 
-## 2. End-to-End Pipeline & Architecture Flow
+## 2. Dual-Benchmark Pipeline & System Architecture
 
-The complete system architecture and MLOps execution flow are illustrated below, detailing the forward path from input RGB images and optical calibration through hierarchical feature extraction, multi-scale local planar guidance, lossless multi-session checkpoint stitching, and downstream tasks.
+The research pipeline is organized into **two independent training tracks** (NYU Depth V2 indoor vs. KITTI outdoor), sharing the core BTS network formulation while learning distinct domain weights adapted to their respective camera intrinsics and physical depth scales.
 
 <div align="center">
-  <img src="docs/figures/pipeline_architecture.png" width="100%" alt="BTS End-to-End Pipeline and Neural Architecture"/>
-  <p><em>Figure 1: Comprehensive System Architecture and MLOps Checkpoint Stitching Pipeline across 8 Kaggle Sessions (50 Epochs).</em></p>
+  <img src="docs/figures/pipeline_architecture.png" width="100%" alt="BTS Dual-Benchmark System Architecture and MLOps Pipeline"/>
+  <p><em>Figure 1: Comprehensive System Architecture showing the Shared Geometric Core (Part 1) and the Dual Independent Training Tracks (Part 2: NYU Depth V2 vs. KITTI Raw).</em></p>
 </div>
 
-### Pipeline Stage Specifications
+### System Architecture Breakdown
 
-1. **Input Stage & Academic Crop Formulation**:
-   - **KITTI (Eigen Split)**: 697 test images evaluated up to $80.0\text{ m}$ cap using Garg crop $[153:371, 44:1197]$.
-   - **NYU Depth V2**: 654 test images evaluated up to $10.0\text{ m}$ cap using official NYU crop $[45:471, 41:601]$.
-2. **Dense Feature Extraction**:
-   - DenseNet-161 backbone extracts hierarchical feature representations across four downsampling levels ($1/4, 1/8, 1/16, 1/32$) with channel depths $96, 192, 384$, and $1056$.
-3. **Multi-Scale Local Planar Guidance (LPG)**:
-   - Rather than relying on simple bilinear upsampling or deconvolution layers, the LPG module fits explicit 4D tangent plane parameters $(\hat{n}_u, \hat{n}_v, \hat{n}_w, d)$ at resolutions $H/8, H/4, H/2$, and $H$, reconstructing depth through optical geometry.
-4. **Lossless Checkpoint Stitching (Kaggle 2x Tesla T4)**:
-   - Overcomes the 12-hour session execution limit by serializing all 227 internal AdamW optimizer state tensors, momentum buffers, and learning rate schedules across 8 sequential sessions without convergence loss.
-5. **Serving & 3D Interactive Visualization**:
-   - FastAPI server with client-side interactive millimeter depth probe, multi-palette colormap rendering, and 3D point cloud generation.
+1. **Part 1: Shared Geometric Core Engine (DenseNet-161 + LPG Decoder)**:
+   - **Feature Hierarchy**: DenseNet-161 extracts multi-scale representations across 4 resolution levels ($1/4, 1/8, 1/16, 1/32$) with $96, 192, 384, 1056$ channels.
+   - **Local Planar Guidance (LPG)**: Decodes features across 4 stages ($H/8 \to H/4 \to H/2 \to H$) by fitting 4D tangent plane equations $(\hat{n}_u, \hat{n}_v, \hat{n}_w, d)$ to reconstruct metric depth from normalized optical rays.
+2. **Part 2 - Track A: NYU Depth V2 Benchmark (Indoor Environment)**:
+   - **Dataset & Calibration**: 24,231 training / 654 test images, Kinect sensor range with $10.0\text{ m}$ evaluation cap, official NYU crop $[45:471, 41:601]$.
+   - **MLOps Stitching**: 5 chained sessions totaling 302,899 steps (50.0 epochs). Reached peak generalization at Step 271,000 ($AbsRel = 0.10967$, beating paper on 5/9 metrics).
+3. **Part 2 - Track B: KITTI Benchmark (Outdoor Autonomous Driving)**:
+   - **Dataset & Calibration**: 23,488 training / 697 test images, Velodyne LiDAR range with $80.0\text{ m}$ evaluation cap, Garg crop $[153:371, 44:1197]$.
+   - **MLOps Stitching**: 8 chained sessions totaling 289,500 steps (50.0 epochs). Reached peak generalization at Step 242,500 ($AbsRel = 0.05748$, $RMSE = 2.4243\text{ m}$, beating paper on all 9/9 metrics).
+4. **Unified Serving Layer**:
+   - Both checkpoints are hosted and served via the FastAPI backend (`web_demo/server.py`), allowing users to switch between Indoor and Outdoor presets with real-time millimeter depth probing and interactive 3D point cloud generation.
 
 ---
 
@@ -67,7 +67,19 @@ Where $(u_0, v_0)$ represents the principal point and $(f_u, f_v)$ denotes the f
 
 ## 4. Lossless Checkpoint Stitching Protocol
 
-To train the full 50 epochs ($289,500$ steps) under Kaggle's 12-hour timeout constraints, execution is partitioned across 8 chained sessions:
+To train the full 50 epochs under Kaggle's 12-hour timeout constraints, execution is partitioned across chained sessions for each dataset:
+
+### Track A: NYU Depth V2 Session Chronology (50 Epochs, ~302.8k Steps)
+
+| Session | Step Range | Epoch Range | Duration | State Handoff Contents | Convergence Status |
+| :---: | :---: | :---: | :---: | :--- | :--- |
+| **Session 1** | $0 \to 74,000$ | $0.0 \to 12.2$ | ~11h 15m | Model weights + ImageNet backbone init | AbsRel: $0.113$ |
+| **Session 2** | $74,000 \to 142,000$ | $12.2 \to 23.4$ | ~11h 30m | 227 AdamW optimizer tensors restored | AbsRel: $0.110$ |
+| **Session 3** | $142,000 \to 196,000$ | $23.4 \to 32.3$ | ~11h 20m | Polynomial LR schedule continuity | AbsRel: $0.110$ |
+| **Session 4** | $196,000 \to 271,000$ | $32.3 \to 44.7$ | ~11h 45m | Momentum buffers preserved | **Peak at Step 271k (AbsRel 0.10967 - Beat Paper)** |
+| **Session 5** | $271,000 \to 302,899$ | $44.7 \to 50.0$ | ~6h 10m | Final 50-epoch milestone completion | **Final Milestone Complete** |
+
+### Track B: KITTI Eigen Split Session Chronology (50 Epochs, ~289.5k Steps)
 
 | Session | Step Range | Epoch Range | Duration | State Handoff Contents | Convergence Status |
 | :---: | :---: | :---: | :---: | :--- | :--- |
@@ -78,7 +90,7 @@ To train the full 50 epochs ($289,500$ steps) under Kaggle's 12-hour timeout con
 | **Session 5** | $145,000 \to 165,000$ | $25.04 \to 28.50$ | ~11h 30m | DDP multi-GPU synchronization state | Gradient stability confirmed |
 | **Session 6** | $165,000 \to 190,000$ | $28.50 \to 32.82$ | ~11h 15m | State handoff & scheduler continuity | Approaching paper ($0.0605$) |
 | **Session 7** | $190,000 \to 235,000$ | $32.82 \to 40.59$ | ~11h 40m | Optimizer momentum restoration | Surpassed paper ($0.0585$) |
-| **Session 8** | $235,000 \to 289,500$ | $40.59 \to 50.00$ | ~10h 24m | Final 50-epoch milestone completion | **Peak at Step 242.5k (AbsRel 0.05748)** |
+| **Session 8** | $235,000 \to 289,500$ | $40.59 \to 50.00$ | ~10h 24m | Final 50-epoch milestone completion | **Peak at Step 242.5k (AbsRel 0.05748 - 9/9 Beat)** |
 
 ---
 
@@ -203,7 +215,7 @@ Monocular-Depth-Estimation/
 │
 ├── docs/                              # Academic defense materials
 │   ├── figures/                       # High-resolution vector diagrams & plots
-│   │   └── pipeline_architecture.png  # 4K Architecture & MLOps system diagram
+│   │   └── pipeline_architecture.png  # 4K Dual-Benchmark Architecture diagram
 │   ├── REPORT_FOR_NOTEBOOKLM_AND_DEFENSE.md  # Comprehensive technical report
 │   ├── SLIDES_DEFENSE_PRESENTATION.md         # 12-slide defense script
 │   └── BTS_CURRENT_STATUS_REPORT.md           # Audit status report
