@@ -1,0 +1,21 @@
+{
+  "completed_utc": "2026-08-26T12:20:00Z",
+  "scope": "Delete every Kaggle dataset not related to Project 1, as explicitly authorized by the account owner.",
+  "datasets_before_cleanup": 39,
+  "datasets_deleted": 32,
+  "datasets_kept": 7,
+  "kept_dataset_refs": [
+    "thudo25/bts-nyuv2-checkpoint",
+    "thudo25/dpt-hybrid-kitti-s1",
+    "thudo25/dpt-hybrid-midas-checkpoint",
+    "thudo25/dpt-hybrid-simple-train",
+    "thudo25/dpt-t-kitti-checkpoint-handoff",
+    "thudo25/kitti-dpt-bts-manifests",
+    "thudo25/official-midas-dpt-hybrid-general-checkpoint"
+  ],
+  "post_delete_owner_inventory_count": 7,
+  "post_delete_owner_inventory_exact_match": true,
+  "verification": "Every deletion was followed by an absence check; the final owner inventory contained exactly the seven approved Project 1 datasets.",
+  "public_conversion_performed": false,
+  "project_dataset_deleted": false
+}

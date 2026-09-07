@@ -1,0 +1,21 @@
+{
+  "id": "thudo25/bts-kitti-gate-2-mounted-audit",
+  "title": "BTS KITTI Gate 2 Mounted Audit",
+  "code_file": "gate2_path_recheck.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [],
+  "dataset_sources": [
+    "thudo25/bts-kitti-eigen-materialized-v1",
+    "thudo25/bts-kitti-gate2-evidence-v1",
+    "thudo25/bts-kitti-gate2-path-evidence-v1"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": [],
+  "machine_shape": "Cpu"
+}

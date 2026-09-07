@@ -1,0 +1,100 @@
+# ==============================================================================
+# GITIGNORE: BTS Monocular Depth Estimation Scientific Reproduction
+# Strict academic open-source standard (excluding datasets, weights, secrets, internal tools)
+# ==============================================================================
+
+# --- Python & Environments ---
+.venv/
+*/.venv/
+venv/
+env/
+__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# --- Large Binary Checkpoints & Model Weights (Hosted on GitHub Releases / Hugging Face) ---
+*.pth
+*.pt
+*.ckpt
+*.bin
+*.onnx
+*.engine
+*.tflite
+*.pb
+*.h5
+*.hdf5
+model
+model-*
+models/
+*/models/
+*/*models*/
+*densenet161*.pth
+
+# --- Datasets & Raw Archives ---
+dataset/
+datasets/
+data/
+raw_data/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.mat
+
+# --- Internal Scratch Tooling & Staging (Excluded per professional publication standard) ---
+tools/
+API/
+secrets/
+scratch/
+build/
+wandb/
+adaptations/
+kitti_pipeline/
+kitti_output/
+kitti_output_*/
+kaggle_checkpoint_dataset/
+kaggle_notebook_pulled/
+artifacts/
+experiments/
+third_party/
+.git_official_backup/
+*/.git_official_backup/
+
+# --- Credentials, Secrets & Keys (STRICTLY FORBIDDEN) ---
+*.key
+*.pem
+*.token
+kaggle.json
+wandb_key.txt
+.env
+.env.*
+
+# --- Large Logs & TensorBoard Summaries ---
+*.log
+*.tfevents*
+events.out.tfevents.*
+summaries/
+*/summaries/
+
+# --- Temporary & Staging Files ---
+*.tmp
+*.temp
+auto_yes.txt
+migration_manifest_before_cleanup.json
+project_tree_detailed.txt
+activate_env.cmd
+depth_research_dossier_claude.zip
+
+# --- IDE & OS ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini

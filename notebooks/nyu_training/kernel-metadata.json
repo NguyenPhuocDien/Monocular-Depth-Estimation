@@ -1,0 +1,19 @@
+{
+  "accelerator": "nvidiaTeslaT4",
+  "kernel_type": "notebook",
+  "code_file": "bts-nyuv2-training.ipynb",
+  "enable_internet": true,
+  "enable_tpu": false,
+  "competition_sources": [],
+  "is_private": true,
+  "title": "bts-nyuv2-training",
+  "language": "python",
+  "dataset_sources": [
+    "npdnguyen/bts-nyuv2-full-training"
+  ],
+  "enable_gpu": true,
+  "id": "npdnguyen/bts-nyuv2-training",
+  "kernel_sources": [
+    "npdnguyen/bts-nyuv2-training"
+  ]
+}

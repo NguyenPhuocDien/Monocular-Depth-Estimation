@@ -1,0 +1,25 @@
+{
+  "attempted_utc": "2026-08-26T04:41:16+00:00",
+  "completed_utc": "2026-08-26T05:31:13+00:00",
+  "dataset_id": "thudo25/bts-kitti-eigen-materialized-v1",
+  "visibility_requested": "private",
+  "upload_assets": [
+    "2011_09_26.zip",
+    "2011_09_28.zip",
+    "2011_09_29.zip",
+    "2011_09_30.zip",
+    "2011_10_03.zip",
+    "data_depth_annotated.zip"
+  ],
+  "compressed_payload_gb_reported_by_kaggle": 21.729,
+  "remaining_private_quota_mb_reported_by_kaggle": 123.041,
+  "minimum_private_free_gb_before_retry": 30,
+  "quota_basis": "Use materialized dataset size and safety headroom, not compressed upload payload alone.",
+  "asset_uploads_completed": true,
+  "dataset_created": false,
+  "dataset_status_query": "403 Forbidden",
+  "dataset_list_query": "No datasets found",
+  "status": "blocked_private_quota",
+  "gate_2_unlocked": false,
+  "note": "Kaggle CLI returned process exit code 0 despite reporting a dataset creation error. Success requires READY/COMPLETE status, owner-list presence, and private metadata; exit code alone is insufficient."
+}

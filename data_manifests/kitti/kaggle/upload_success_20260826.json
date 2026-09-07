@@ -1,0 +1,30 @@
+{
+  "created_utc": "2026-08-26T12:24:30.973Z",
+  "verified_utc": "2026-08-26T12:28:26Z",
+  "dataset_id": "thudo25/bts-kitti-eigen-materialized-v1",
+  "dataset_numeric_id": 11792259,
+  "visibility_requested": "private",
+  "upload_assets": [
+    "2011_09_26.zip",
+    "2011_09_28.zip",
+    "2011_09_29.zip",
+    "2011_09_30.zip",
+    "2011_10_03.zip",
+    "data_depth_annotated.zip"
+  ],
+  "local_reverification": {
+    "files": 47665,
+    "bytes": 23695187138,
+    "official_membership": "passed",
+    "sha256_manifest": "passed"
+  },
+  "semantic_error_absent": true,
+  "dataset_status": "ready",
+  "appears_in_owner_dataset_list": true,
+  "metadata_is_private": true,
+  "upload_gate": "passed",
+  "gate_2": "unlocked_for_independent_review",
+  "k0_k4": "locked",
+  "training": "locked",
+  "note": "The first retry process timed out after five archive uploads. The final archive was completed through Kaggle's resumable upload endpoint and the dataset was created from six distinct upload tokens. CLI exit status alone was not used as success evidence."
+}

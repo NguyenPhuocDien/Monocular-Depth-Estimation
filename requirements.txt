@@ -1,0 +1,27 @@
+# ==============================================================================
+# BTS Monocular Depth Estimation: Environment Requirements
+# Compatible with PyTorch 2.x, Python 3.10+, and CUDA 11.8/12.x
+# ==============================================================================
+
+# Core Deep Learning Framework
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Scientific & Array Computing
+numpy>=1.22.0,<3.0.0
+scipy>=1.9.0
+
+# Image & Vision Processing
+opencv-python>=4.7.0
+Pillow>=9.0.0
+matplotlib>=3.5.0
+
+# Web Demo & Interactive Point Cloud API
+fastapi>=0.100.0
+uvicorn>=0.22.0
+python-multipart>=0.0.6
+
+# Utilities & Experiment Tracking
+tqdm>=4.65.0
+pyyaml>=6.0
+requests>=2.28.0

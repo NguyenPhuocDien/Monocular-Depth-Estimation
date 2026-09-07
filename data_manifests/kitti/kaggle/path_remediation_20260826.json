@@ -1,0 +1,28 @@
+{
+  "completed_utc": "2026-08-26T14:44:22.729652Z",
+  "scope": "Allowlisted Kaggle mount-path remediation and Gate-2 focused recheck",
+  "changed_fields": [
+    "data_path",
+    "gt_path",
+    "data_path_eval",
+    "gt_path_eval"
+  ],
+  "old_mount_root": "/kaggle/input/bts-kitti-eigen-materialized-v1/",
+  "new_mount_root": "/kaggle/input/datasets/thudo25/bts-kitti-eigen-materialized-v1/",
+  "old_config_sha256": "25dabeb258f970172ebc67759cab1b343518bd928800e55f3d9e01b7107a44b1",
+  "new_config_sha256": "9bef0b1329a0ff8cb394e1985a240ebc299dab0d15959dab2a04c8aaaebef6e7",
+  "patch_sha256": "03fbe34208408c93b5b8937e8e7431ed5ce2ca07e95caa880f6a63e7ef78dea7",
+  "official_commit": "5e3406b35d1497b2e55d2dd600524d1f4efacaed",
+  "official_source_clean": true,
+  "clean_runtime_help_side_effect_free": true,
+  "compileall": "passed",
+  "runtime_smoke": "passed",
+  "agent_c_protocol_audit": "passed",
+  "focused_gate2_kernel": "thudo25/bts-kitti-gate-2-mounted-audit/4",
+  "focused_gate2_output": "artifacts/kaggle/bts_kitti_gate2/run04/gate2_path_recheck.json",
+  "focused_gate2_path_recheck": "passed",
+  "full_content_audit_reused": "artifacts/kaggle/bts_kitti_gate2/run02/gate2_mounted_audit.json",
+  "gate_2": "passed",
+  "k0_k4": "unlocked",
+  "full_training": "locked"
+}

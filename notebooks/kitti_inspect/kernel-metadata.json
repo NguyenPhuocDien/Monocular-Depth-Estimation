@@ -1,0 +1,24 @@
+{
+  "id": "thudo25/fork-of-kitti-week1-full-a-b-fixed-v14b-table4-fix",
+  "id_no": 127035240,
+  "title": "fork-of-kitti-week1-full-a-b-fixed-v14b-table4-fix",
+  "code_file": "fork-of-kitti-week1-full-a-b-fixed-v14b-table4-fix.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "keywords": [],
+  "dataset_sources": [
+    "awsaf49/bdd100k-dataset",
+    "asefjamilajwad/car-crash-dataset-ccd",
+    "leducnhuan/kitti-tracking",
+    "mitanshuchakrawarty/nuscenes"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": [],
+  "docker_image": "gcr.io/kaggle-private-byod/python@sha256:37c64f7dd9c54116ecd1bcc88817c5469b88387388fade02bfa8bf3fc647d461",
+  "machine_shape": "NvidiaTeslaT4"
+}

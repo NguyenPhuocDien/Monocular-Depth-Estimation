@@ -1,0 +1,176 @@
+diff --git a/pytorch/bts_main.py b/pytorch/bts_main.py
+index 5d285fb..ec00c1a 100644
+--- a/pytorch/bts_main.py
++++ b/pytorch/bts_main.py
+@@ -20,6 +20,7 @@ import datetime
+ import sys
+ import os
+ import shutil
++from pathlib import Path
+ 
+ import torch
+ import torch.nn as nn
+@@ -38,6 +39,14 @@ from tqdm import tqdm
+ 
+ from bts import BtsModel
+ from bts_dataloader import *
++from checkpoint_retention import (
++    build_training_checkpoint,
++    checkpoint_classes,
++    emit_scientific_checkpoint,
++    parse_milestone_epochs,
++    rotate_recovery_checkpoint,
++    validate_checkpoint,
++)
+ 
+ 
+ def convert_arg_line_to_args(arg_line):
+@@ -114,6 +123,8 @@ parser.add_argument('--eval_freq',                 type=int,   help='Online eval
+ parser.add_argument('--eval_summary_directory',    type=str,   help='output directory for eval summary,'
+                                                                     'if empty outputs to checkpoint folder', default='')
+ parser.add_argument('--max_steps',                 type=int,   help='Max global steps for isolated smoke testing (default -1 = unlimited)', default=-1)
++parser.add_argument('--checkpoint_retention',                  help='Enable verified rolling recovery plus milestone/final emission', action='store_true')
++parser.add_argument('--milestone_epochs',          type=str,   help='Comma-separated scientific checkpoint epochs', default='5,10,20,30,40,50')
+ 
+ if sys.argv.__len__() == 2:
+     arg_filename_with_prefix = '@' + sys.argv[1]
+@@ -384,15 +395,22 @@ def main_worker(gpu, ngpus_per_node, args):
+                 loc = 'cuda:{}'.format(args.gpu)
+                 checkpoint = torch.load(args.checkpoint_path, map_location=loc, weights_only=False)
+             last_completed_step = checkpoint['global_step']
++            if args.checkpoint_retention:
++                validate_checkpoint(checkpoint, last_completed_step)
+             global_step = last_completed_step + 1
+             model.load_state_dict(checkpoint['model'])
+             optimizer.load_state_dict(checkpoint['optimizer'])
+-            try:
++            if args.checkpoint_retention:
+                 best_eval_measures_higher_better = checkpoint['best_eval_measures_higher_better'].cpu()
+                 best_eval_measures_lower_better = checkpoint['best_eval_measures_lower_better'].cpu()
+                 best_eval_steps = checkpoint['best_eval_steps']
+-            except KeyError:
+-                print("Could not load values for online evaluation")
++            else:
++                try:
++                    best_eval_measures_higher_better = checkpoint['best_eval_measures_higher_better'].cpu()
++                    best_eval_measures_lower_better = checkpoint['best_eval_measures_lower_better'].cpu()
++                    best_eval_steps = checkpoint['best_eval_steps']
++                except KeyError:
++                    print("Could not load values for online evaluation")
+ 
+             print(
+                 "Loaded checkpoint '{}' "
+@@ -478,6 +496,7 @@ def main_worker(gpu, ngpus_per_node, args):
+ 
+     steps_per_epoch = len(dataloader.data)
+     num_total_steps = args.num_epochs * steps_per_epoch
++    milestone_epochs = parse_milestone_epochs(args.milestone_epochs)
+     if not args.multiprocessing_distributed or (args.multiprocessing_distributed and args.rank % ngpus_per_node == 0):
+         print("=================================================================")
+         print("[RUNTIME AUDIT]")
+@@ -490,6 +509,15 @@ def main_worker(gpu, ngpus_per_node, args):
+         print(f"Epochs           : {args.num_epochs}")
+         print(f"Total Steps      : {num_total_steps}")
+         print("=================================================================")
++        assert ngpus_per_node == 2, f"Expected exactly 2 GPUs, got {ngpus_per_node}"
++        assert args.batch_size == 2, f"Expected local batch size 2, got {args.batch_size}"
++        assert args.batch_size * ngpus_per_node == 4, (
++            "Expected global batch size 4, got {}".format(
++                args.batch_size * ngpus_per_node
++            )
++        )
++        assert steps_per_epoch == 5790, f"Expected 5790 steps/epoch, got {steps_per_epoch}"
++        assert num_total_steps == 289500, f"Expected 289500 total steps, got {num_total_steps}"
+     epoch = global_step // steps_per_epoch
+     resume_step_in_epoch = global_step % steps_per_epoch
+ 
+@@ -647,41 +675,69 @@ def main_worker(gpu, ngpus_per_node, args):
+                 set_misc(model)
+                 enable_print()
+ 
+-            # Rolling recovery checkpoint.
+-            # Keep only one latest checkpoint so long Kaggle runs
+-            # can resume without accumulating hundreds of files.
+-            if global_step and global_step % args.save_freq == 0:
++            # Checkpoint side effects are isolated from optimization.
++            if args.checkpoint_retention and global_step and global_step % args.save_freq == 0:
++                if not args.distributed or args.rank == 0:
++                    checkpoint = build_training_checkpoint(
++                        global_step,
++                        model,
++                        optimizer,
++                        best_eval_measures_higher_better,
++                        best_eval_measures_lower_better,
++                        best_eval_steps,
++                    )
++                    recovery = rotate_recovery_checkpoint(
++                        checkpoint,
++                        Path(args.log_directory) / args.model_name,
++                    )
++                    print("Saved verified recovery checkpoint: {}".format(recovery['latest']['path']))
++            elif global_step and global_step % args.save_freq == 0:
+                 if not args.distributed or args.rank == 0:
+                     checkpoint = {
+                         'global_step': global_step,
+                         'model': model.state_dict(),
+                         'optimizer': optimizer.state_dict(),
+-                        'best_eval_measures_higher_better':
+-                            best_eval_measures_higher_better,
+-                        'best_eval_measures_lower_better':
+-                            best_eval_measures_lower_better,
+-                        'best_eval_steps':
+-                            best_eval_steps
++                        'best_eval_measures_higher_better': best_eval_measures_higher_better,
++                        'best_eval_measures_lower_better': best_eval_measures_lower_better,
++                        'best_eval_steps': best_eval_steps,
+                     }
+-
+                     latest_path = os.path.join(
+                         args.log_directory,
+                         args.model_name,
+                         'model-latest'
+                     )
+-
+                     temp_path = latest_path + '.tmp'
+-
+                     torch.save(checkpoint, temp_path)
+                     os.replace(temp_path, latest_path)
+-
+-                    print(
+-                        "Saved recovery checkpoint: {} "
+-                        "(global_step {})".format(
+-                            latest_path,
+-                            global_step
+-                        )
++                    print("Saved recovery checkpoint: {} (global_step {})".format(
++                        latest_path, global_step
++                    ))
++
++            if args.checkpoint_retention and (not args.distributed or args.rank == 0):
++                completed_epoch, retention_classes = checkpoint_classes(
++                    global_step,
++                    steps_per_epoch,
++                    args.num_epochs,
++                    milestone_epochs,
++                )
++                if retention_classes:
++                    checkpoint = build_training_checkpoint(
++                        global_step,
++                        model,
++                        optimizer,
++                        best_eval_measures_higher_better,
++                        best_eval_measures_lower_better,
++                        best_eval_steps,
++                    )
++                    receipt = emit_scientific_checkpoint(
++                        checkpoint,
++                        Path(args.log_directory) / args.model_name,
++                        completed_epoch,
++                        retention_classes,
+                     )
++                    print("Saved scientific checkpoint: {} ({})".format(
++                        receipt['path'], ','.join(receipt['classes'])
++                    ))
+ 
+             model_just_loaded = False
+             global_step += 1

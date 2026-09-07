@@ -1,0 +1,431 @@
+diff --git a/adaptations/bts_runtime/pytorch/arguments_train_nyu_smoke.txt b/adaptations/bts_runtime/pytorch/arguments_train_nyu_smoke.txt
+new file mode 100644
+index 0000000..289e7cd
+--- /dev/null
++++ b/adaptations/bts_runtime/pytorch/arguments_train_nyu_smoke.txt
+@@ -0,0 +1,35 @@
++--mode train
++--model_name bts_nyu_smoke
++--encoder densenet161_bts
++--dataset nyu
++
++--data_path ../../dataset/nyu_depth_v2/sync/
++--gt_path ../../dataset/nyu_depth_v2/sync/
++--filenames_file ../train_test_inputs/nyudepthv2_train_smoke.txt
++
++--batch_size 1
++--num_epochs 1
++--learning_rate 1e-4
++--weight_decay 1e-2
++--adam_eps 1e-3
++
++--num_threads 0
++
++--input_height 256
++--input_width 320
++--max_depth 10
++
++--do_random_rotate
++--degree 2.5
++
++--log_directory ./models/
++--log_freq 1
++--save_freq 1
++
++--data_path_eval ../../dataset/nyu_depth_v2/official_splits/test/
++--gt_path_eval ../../dataset/nyu_depth_v2/official_splits/test/
++--filenames_file_eval ../train_test_inputs/nyudepthv2_test_files_with_gt.txt
++--min_depth_eval 1e-3
++--max_depth_eval 10
++--eval_summary_directory ./models/eval/
++--eigen_crop
+diff --git a/adaptations/bts_runtime/pytorch/arguments_train_nyu_smoke_resume.txt b/adaptations/bts_runtime/pytorch/arguments_train_nyu_smoke_resume.txt
+new file mode 100644
+index 0000000..08783ea
+--- /dev/null
++++ b/adaptations/bts_runtime/pytorch/arguments_train_nyu_smoke_resume.txt
+@@ -0,0 +1,36 @@
++--mode train
++--model_name bts_nyu_smoke_resume
++--encoder densenet161_bts
++--dataset nyu
++
++--data_path ../../dataset/nyu_depth_v2/sync/
++--gt_path ../../dataset/nyu_depth_v2/sync/
++--filenames_file ../train_test_inputs/nyudepthv2_train_smoke.txt
++
++--batch_size 1
++--num_epochs 1
++--learning_rate 1e-4
++--weight_decay 1e-2
++--adam_eps 1e-3
++
++--num_threads 0
++
++--input_height 256
++--input_width 320
++--max_depth 10
++
++--do_random_rotate
++--degree 2.5
++
++--log_directory ./models/
++--log_freq 1000
++--save_freq 1
++--checkpoint_path ./models/bts_nyu_smoke/model-1
++
++--data_path_eval ../../dataset/nyu_depth_v2/official_splits/test/
++--gt_path_eval ../../dataset/nyu_depth_v2/official_splits/test/
++--filenames_file_eval ../train_test_inputs/nyudepthv2_test_files_with_gt.txt
++--min_depth_eval 1e-3
++--max_depth_eval 10
++--eval_summary_directory ./models/eval/
++--eigen_crop
+diff --git a/third_party/bts_official/pytorch/bts_eval.py b/adaptations/bts_runtime/pytorch/bts_eval.py
+index c8ddc30..57da2b2 100644
+--- a/third_party/bts_official/pytorch/bts_eval.py
++++ b/adaptations/bts_runtime/pytorch/bts_eval.py
+@@ -162,10 +162,10 @@ def test(params):
+     
+     for step in steps:
+         if os.path.isdir(args.checkpoint_path):
+-            checkpoint = torch.load(os.path.join(args.checkpoint_path, 'model-' + str(int(step))))
++            checkpoint = torch.load(os.path.join(args.checkpoint_path, 'model-' + str(int(step))), weights_only=False)
+             model.load_state_dict(checkpoint['model'])
+         else:
+-            checkpoint = torch.load(args.checkpoint_path)
++            checkpoint = torch.load(args.checkpoint_path, weights_only=False)
+             model.load_state_dict(checkpoint['model'])
+ 
+         model.eval()
+diff --git a/third_party/bts_official/pytorch/bts_main.py b/adaptations/bts_runtime/pytorch/bts_main.py
+index dbd7981..eb5df9b 100644
+--- a/third_party/bts_official/pytorch/bts_main.py
++++ b/adaptations/bts_runtime/pytorch/bts_main.py
+@@ -19,6 +19,7 @@ import argparse
+ import datetime
+ import sys
+ import os
++import shutil
+ 
+ import torch
+ import torch.nn as nn
+@@ -112,6 +113,7 @@ parser.add_argument('--garg_crop',                             help='if set, cro
+ parser.add_argument('--eval_freq',                 type=int,   help='Online evaluation frequency in global steps', default=500)
+ parser.add_argument('--eval_summary_directory',    type=str,   help='output directory for eval summary,'
+                                                                     'if empty outputs to checkpoint folder', default='')
++parser.add_argument('--max_steps',                 type=int,   help='Max global steps for isolated smoke testing (default -1 = unlimited)', default=-1)
+ 
+ if sys.argv.__len__() == 2:
+     arg_filename_with_prefix = '@' + sys.argv[1]
+@@ -377,11 +379,12 @@ def main_worker(gpu, ngpus_per_node, args):
+         if os.path.isfile(args.checkpoint_path):
+             print("Loading checkpoint '{}'".format(args.checkpoint_path))
+             if args.gpu is None:
+-                checkpoint = torch.load(args.checkpoint_path)
++                checkpoint = torch.load(args.checkpoint_path, weights_only=False)
+             else:
+                 loc = 'cuda:{}'.format(args.gpu)
+-                checkpoint = torch.load(args.checkpoint_path, map_location=loc)
+-            global_step = checkpoint['global_step']
++                checkpoint = torch.load(args.checkpoint_path, map_location=loc, weights_only=False)
++            last_completed_step = checkpoint['global_step']
++            global_step = last_completed_step + 1
+             model.load_state_dict(checkpoint['model'])
+             optimizer.load_state_dict(checkpoint['optimizer'])
+             try:
+@@ -391,7 +394,15 @@ def main_worker(gpu, ngpus_per_node, args):
+             except KeyError:
+                 print("Could not load values for online evaluation")
+ 
+-            print("Loaded checkpoint '{}' (global_step {})".format(args.checkpoint_path, checkpoint['global_step']))
++            print(
++                "Loaded checkpoint '{}' "
++                "(last completed global_step {}, "
++                "resuming from global_step {})".format(
++                    args.checkpoint_path,
++                    last_completed_step,
++                    global_step
++                )
++            )
+         else:
+             print("No checkpoint found at '{}'".format(args.checkpoint_path))
+         model_just_loaded = True
+@@ -414,6 +425,37 @@ def main_worker(gpu, ngpus_per_node, args):
+                 eval_summary_path = os.path.join(args.log_directory, 'eval')
+             eval_summary_writer = SummaryWriter(eval_summary_path, flush_secs=30)
+ 
++        # Initialize Weights & Biases (WandB) on rank 0
++        wandb_active = False
++        try:
++            wandb_key = os.environ.get("WANDB_API_KEY", "")
++            if wandb_key:
++                import wandb
++                wandb.login(key=wandb_key)
++                wandb.init(
++                    project=os.environ.get("WANDB_PROJECT", "bts-nyuv2-depth-research"),
++                    entity=os.environ.get("WANDB_ENTITY", "edward-carlos731-industrial-university-of-ho-chi-minh-city"),
++                    name="bts-densenet161-50ep",
++                    config={
++                        "model": args.model_name,
++                        "encoder": args.encoder,
++                        "dataset": args.dataset,
++                        "epochs": args.num_epochs,
++                        "batch_size": args.batch_size * ngpus_per_node if args.distributed else args.batch_size,
++                        "learning_rate": args.learning_rate,
++                        "weight_decay": args.weight_decay,
++                    },
++                    resume="allow",
++                    id="bts-nyuv2-50ep-run"
++                )
++                wandb_active = True
++                print("Weights & Biases (WandB) initialized successfully!")
++        except Exception as e:
++            print("WandB init skipped/failed:", e)
++            wandb_active = False
++    else:
++        wandb_active = False
++
+     silog_criterion = silog_loss(variance_focus=args.variance_focus)
+ 
+     start_time = time.time()
+@@ -422,21 +464,55 @@ def main_worker(gpu, ngpus_per_node, args):
+     num_log_images = args.batch_size
+     end_learning_rate = args.end_learning_rate if args.end_learning_rate != -1 else 0.1 * args.learning_rate
+ 
+-    var_sum = [var.sum() for var in model.parameters() if var.requires_grad]
+-    var_cnt = len(var_sum)
+-    var_sum = np.sum(var_sum)
++    with torch.no_grad():
++        var_sums = [var.sum() for var in model.parameters() if var.requires_grad]
++        var_cnt = len(var_sums)
++        var_sum = torch.stack(var_sums).sum()
+ 
+-    print("Initial variables' sum: {:.3f}, avg: {:.3f}".format(var_sum, var_sum/var_cnt))
++    print(
++        "Initial variables' sum: {:.3f}, avg: {:.3f}".format(
++            var_sum.item(),
++            var_sum.item() / var_cnt
++        )
++    )
+ 
+     steps_per_epoch = len(dataloader.data)
+     num_total_steps = args.num_epochs * steps_per_epoch
++    if not args.multiprocessing_distributed or (args.multiprocessing_distributed and args.rank % ngpus_per_node == 0):
++        print("=================================================================")
++        print("[RUNTIME AUDIT]")
++        print(f"Dataset          : {args.dataset}")
++        print(f"World Size       : {ngpus_per_node}")
++        print(f"Local Batch Size : {args.batch_size}")
++        print(f"Global Batch Size: {args.batch_size * ngpus_per_node}")
++        print(f"Train Samples    : {len(dataloader.training_samples)}")
++        print(f"Steps / Epoch    : {steps_per_epoch}")
++        print(f"Epochs           : {args.num_epochs}")
++        print(f"Total Steps      : {num_total_steps}")
++        print("=================================================================")
+     epoch = global_step // steps_per_epoch
++    resume_step_in_epoch = global_step % steps_per_epoch
+ 
+     while epoch < args.num_epochs:
+         if args.distributed:
+             dataloader.train_sampler.set_epoch(epoch)
+ 
+         for step, sample_batched in enumerate(dataloader.data):
++            if model_just_loaded and step < resume_step_in_epoch:
++                continue
++
++            if model_just_loaded:
++                print(
++                    "Resume position: epoch {}, "
++                    "step {}/{}, global_step {}".format(
++                        epoch,
++                        step,
++                        steps_per_epoch,
++                        global_step
++                    )
++                )
++                model_just_loaded = False
++
+             optimizer.zero_grad()
+             before_op_time = time.time()
+ 
+@@ -467,9 +546,10 @@ def main_worker(gpu, ngpus_per_node, args):
+ 
+             duration += time.time() - before_op_time
+             if global_step and global_step % args.log_freq == 0 and not model_just_loaded:
+-                var_sum = [var.sum() for var in model.parameters() if var.requires_grad]
+-                var_cnt = len(var_sum)
+-                var_sum = np.sum(var_sum)
++                with torch.no_grad():
++                    var_sums = [var.sum() for var in model.parameters() if var.requires_grad]
++                    var_cnt = len(var_sums)
++                    var_sum = torch.stack(var_sums).sum()
+                 examples_per_sec = args.batch_size / duration * args.log_freq
+                 duration = 0
+                 time_sofar = (time.time() - start_time) / 3600
+@@ -493,6 +573,17 @@ def main_worker(gpu, ngpus_per_node, args):
+                         writer.add_image('lpg4x4/image/{}'.format(i), normalize_result(1/lpg4x4[i, :, :, :].data), global_step)
+                         writer.add_image('lpg8x8/image/{}'.format(i), normalize_result(1/lpg8x8[i, :, :, :].data), global_step)
+                         writer.add_image('image/image/{}'.format(i), inv_normalize(image[i, :, :, :]).data, global_step)
++                    if wandb_active:
++                        try:
++                            import wandb
++                            wandb.log({
++                                "train/silog_loss": loss.item(),
++                                "train/learning_rate": current_lr,
++                                "train/epoch": epoch,
++                                "train/examples_per_sec": examples_per_sec,
++                            }, step=int(global_step))
++                        except Exception:
++                            pass
+                     writer.flush()
+ 
+             if not args.do_online_eval and global_step and global_step % args.save_freq == 0:
+@@ -537,15 +628,71 @@ def main_worker(gpu, ngpus_per_node, args):
+                                           'best_eval_steps': best_eval_steps
+                                           }
+                             torch.save(checkpoint, args.log_directory + '/' + args.model_name + model_save_name)
++                    if wandb_active:
++                        try:
++                            import wandb
++                            wandb.log({
++                                "eval/silog": eval_measures[0].item(),
++                                "eval/abs_rel": eval_measures[1].item(),
++                                "eval/log10": eval_measures[2].item(),
++                                "eval/rms": eval_measures[3].item(),
++                                "eval/sq_rel": eval_measures[4].item(),
++                                "eval/log_rms": eval_measures[5].item(),
++                                "eval/delta1": eval_measures[6].item(),
++                                "eval/delta2": eval_measures[7].item(),
++                                "eval/delta3": eval_measures[8].item(),
++                            }, step=int(global_step))
++                        except Exception:
++                            pass
+                     eval_summary_writer.flush()
+                 model.train()
+                 block_print()
+                 set_misc(model)
+                 enable_print()
+ 
++            # Rolling recovery checkpoint.
++            # Keep only one latest checkpoint so long Kaggle runs
++            # can resume without accumulating hundreds of files.
++            if global_step and global_step % args.save_freq == 0:
++                if not args.distributed or args.rank == 0:
++                    checkpoint = {
++                        'global_step': global_step,
++                        'model': model.state_dict(),
++                        'optimizer': optimizer.state_dict(),
++                        'best_eval_measures_higher_better':
++                            best_eval_measures_higher_better,
++                        'best_eval_measures_lower_better':
++                            best_eval_measures_lower_better,
++                        'best_eval_steps':
++                            best_eval_steps
++                    }
++
++                    latest_path = os.path.join(
++                        args.log_directory,
++                        args.model_name,
++                        'model-latest'
++                    )
++
++                    temp_path = latest_path + '.tmp'
++
++                    torch.save(checkpoint, temp_path)
++                    os.replace(temp_path, latest_path)
++
++                    print(
++                        "Saved recovery checkpoint: {} "
++                        "(global_step {})".format(
++                            latest_path,
++                            global_step
++                        )
++                    )
++
+             model_just_loaded = False
+             global_step += 1
+ 
++            if args.max_steps > 0 and global_step >= args.max_steps:
++                print(f"[SMOKE TEST] Reached max_steps ({args.max_steps}). Exiting training loop early.")
++                return
++
+         epoch += 1
+        
+     if not args.multiprocessing_distributed or (args.multiprocessing_distributed and args.rank % ngpus_per_node == 0):
+@@ -559,32 +706,46 @@ def main():
+         return -1
+ 
+     model_filename = args.model_name + '.py'
+-    command = 'mkdir ' + args.log_directory + '/' + args.model_name
+-    os.system(command)
+ 
+-    args_out_path = args.log_directory + '/' + args.model_name + '/' + sys.argv[1]
+-    command = 'cp ' + sys.argv[1] + ' ' + args_out_path
+-    os.system(command)
++    experiment_dir = os.path.join(args.log_directory, args.model_name)
++    os.makedirs(experiment_dir, exist_ok=True)
++
++    args_out_path = os.path.join(
++        experiment_dir,
++        os.path.basename(sys.argv[1])
++    )
++    shutil.copy2(sys.argv[1], args_out_path)
+ 
+     if args.checkpoint_path == '':
+-        model_out_path = args.log_directory + '/' + args.model_name + '/' + model_filename
+-        command = 'cp bts.py ' + model_out_path
+-        os.system(command)
+-        aux_out_path = args.log_directory + '/' + args.model_name + '/.'
+-        command = 'cp bts_main.py ' + aux_out_path
+-        os.system(command)
+-        command = 'cp bts_dataloader.py ' + aux_out_path
+-        os.system(command)
++        model_out_path = os.path.join(
++            experiment_dir,
++            model_filename
++        )
++
++        shutil.copy2('bts.py', model_out_path)
++        shutil.copy2('bts_main.py', experiment_dir)
++        shutil.copy2('bts_dataloader.py', experiment_dir)
++
+     else:
+         loaded_model_dir = os.path.dirname(args.checkpoint_path)
+         loaded_model_name = os.path.basename(loaded_model_dir)
+         loaded_model_filename = loaded_model_name + '.py'
+ 
+-        model_out_path = args.log_directory + '/' + args.model_name + '/' + model_filename
+-        command = 'cp ' + loaded_model_dir + '/' + loaded_model_filename + ' ' + model_out_path
+-        os.system(command)
++        model_out_path = os.path.join(
++            experiment_dir,
++            model_filename
++        )
++
++        shutil.copy2(
++            os.path.join(
++                loaded_model_dir,
++                loaded_model_filename
++            ),
++            model_out_path
++        )
+ 
+     torch.cuda.empty_cache()
++
+     args.distributed = args.world_size > 1 or args.multiprocessing_distributed
+ 
+     ngpus_per_node = torch.cuda.device_count()
+diff --git a/third_party/bts_official/pytorch/bts_test.py b/adaptations/bts_runtime/pytorch/bts_test.py
+index 71cd6fe..f7d1463 100644
+--- a/third_party/bts_official/pytorch/bts_test.py
++++ b/adaptations/bts_runtime/pytorch/bts_test.py
+@@ -89,7 +89,7 @@ def test(params):
+     model = BtsModel(params=args)
+     model = torch.nn.DataParallel(model)
+     
+-    checkpoint = torch.load(args.checkpoint_path)
++    checkpoint = torch.load(args.checkpoint_path, weights_only=False)
+     model.load_state_dict(checkpoint['model'])
+     model.eval()
+     model.cuda()

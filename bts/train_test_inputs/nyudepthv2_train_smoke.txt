@@ -1,0 +1,2 @@
+/kitchen_0028b/rgb_00045.jpg /kitchen_0028b/sync_depth_00045.png 518.8579
+/living_room_0019/rgb_00111.jpg /living_room_0019/sync_depth_00111.png 518.8579

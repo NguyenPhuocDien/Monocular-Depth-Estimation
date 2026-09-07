@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "started_utc": "2026-08-26T04:16:07.651340+00:00",
+  "source_root": "G:\\depth-research\\dataset\\kitti_dataset",
+  "destination_root": "C:\\Users\\GIGA\\bts-kitti-eigen-materialized-v1",
+  "files_total": 47665,
+  "files_completed": 47665,
+  "bytes_total": 23695187138,
+  "bytes_completed": 23695187138,
+  "completed_utc": "2026-08-26T04:40:10.155710+00:00",
+  "source_destination_sha256_equal": true,
+  "unexpected_train_rgb_missing": 0,
+  "unexpected_train_gt_missing": 0,
+  "unexpected_test_rgb_missing": 0,
+  "expected_test_gt_none": 45
+}

@@ -1,0 +1,52 @@
+{
+  "initial_reviewed_utc": "2026-08-26T14:20:00Z",
+  "completed_utc": "2026-08-26T14:44:22.729652Z",
+  "gate": "D_GATE_2",
+  "initial_decision": "failed_path_compatibility",
+  "decision": "passed",
+  "dataset_id": "thudo25/bts-kitti-eigen-materialized-v1",
+  "dataset_identity": {
+    "status": "ready",
+    "is_private": true,
+    "owner_inventory_presence": true
+  },
+  "kernel": {
+    "ref": "thudo25/bts-kitti-gate-2-mounted-audit",
+    "version": 2,
+    "status": "complete",
+    "output": "artifacts/kaggle/bts_kitti_gate2/run02/gate2_mounted_audit.json"
+  },
+  "mounted_content_audit": {
+    "status": "passed",
+    "mount": "/kaggle/input/datasets/thudo25/bts-kitti-eigen-materialized-v1",
+    "files": 47665,
+    "bytes": 23695187138,
+    "sha256_mismatches": 0,
+    "missing_files": 0,
+    "unexpected_files": 0,
+    "train_rgb_resolved": 23158,
+    "train_gt_resolved": 23158,
+    "test_rgb_resolved": 697,
+    "expected_test_gt_none": 45
+  },
+  "protocol_invariants": {
+    "official_commit": "5e3406b35d1497b2e55d2dd600524d1f4efacaed",
+    "official_source_clean": true,
+    "official_list_hashes_unchanged": true,
+    "runtime_config_differences_allowlisted": true,
+    "configured_data_path": "/kaggle/input/datasets/thudo25/bts-kitti-eigen-materialized-v1/",
+    "observed_mount_path": "/kaggle/input/datasets/thudo25/bts-kitti-eigen-materialized-v1/",
+    "configured_mount_path_resolves": true,
+    "runtime_smoke_after_review": "passed"
+  },
+  "provenance_lineage": "passed",
+  "path_remediation": "data_manifests/kitti/kaggle/path_remediation_20260826.json",
+  "focused_path_recheck": "artifacts/kaggle/bts_kitti_gate2/run04/gate2_path_recheck.json",
+  "blocker": null,
+  "authorization_boundary": {
+    "runtime_config_modified": true,
+    "runtime_change_scope": "four allowlisted Kaggle data/GT path fields only",
+    "k0_k4_unlocked": true,
+    "training_unlocked": false
+  }
+}

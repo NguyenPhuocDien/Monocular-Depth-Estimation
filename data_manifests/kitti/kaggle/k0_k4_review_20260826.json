@@ -1,0 +1,42 @@
+{
+  "reviewed_utc": "2026-08-26T16:42:00+00:00",
+  "dataset_id": "thudo25/bts-kitti-eigen-materialized-v1",
+  "runtime_dataset_id": "thudo25/bts-kitti-runtime-5e3406b-v1",
+  "weight_dataset_id": "thudo25/bts-densenet161-imagenet-weight-v1",
+  "official_commit": "5e3406b35d1497b2e55d2dd600524d1f4efacaed",
+  "runtime_config_sha256": "9bef0b1329a0ff8cb394e1985a240ebc299dab0d15959dab2a04c8aaaebef6e7",
+  "densenet161_weight_sha256": "8d451a50bad6b9a83f477126c443716882a17af26e94d338154b058fb2dfd359",
+  "gates": {
+    "k0": {
+      "status": "passed",
+      "kernel": "thudo25/bts-kitti-k0-mount-path-gate/1",
+      "report": "artifacts/kaggle/bts_kitti_k0/run01/k0_mount_path_report.json"
+    },
+    "k1": {
+      "status": "passed",
+      "kernel": "thudo25/bts-kitti-k1-dataloader-gate/1",
+      "report": "artifacts/kaggle/bts_kitti_k1/run01/k1_dataloader_report.json"
+    },
+    "k2": {
+      "status": "passed",
+      "kernel": "thudo25/bts-kitti-k2-forward-backward-gate/1",
+      "report": "artifacts/kaggle/bts_kitti_k2/run01/k2_forward_backward_report.json"
+    },
+    "k3": {
+      "status": "passed",
+      "kernel": "thudo25/bts-kitti-k3-tiny-train-gate/1",
+      "report": "artifacts/kaggle/bts_kitti_k3/run01/k3_tiny_train_report.json"
+    },
+    "k4": {
+      "status": "passed",
+      "kernel": "thudo25/bts-kitti-k4-checkpoint-resume-gate/1",
+      "report": "artifacts/kaggle/bts_kitti_k4/run01/k4_checkpoint_resume_report.json",
+      "checkpoint": "artifacts/kaggle/bts_kitti_k4/run01/k4_checkpoint_step_2.pth",
+      "checkpoint_bytes": 565856097,
+      "checkpoint_sha256": "68872d9bcae3512ddc8ba8794fb746ca8fd4872064cff1e1f0bf69d990e1e4db"
+    }
+  },
+  "overall": "passed",
+  "full_training": "unlocked_not_started",
+  "reproduction_complete": false
+}

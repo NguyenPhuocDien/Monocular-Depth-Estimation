@@ -1,0 +1,11 @@
+{
+  "telegram_bot_token": "",
+  "telegram_chat_id": "",
+  "active_account": "",
+  "default_kernel_slug": "bts-nyuv2-training",
+  "default_checkpoint_slug": "bts-nyuv2-checkpoint",
+  "default_gpu": "nvidiaTeslaT4x2",
+  "wandb_entity": "edward-carlos731-industrial-university-of-ho-chi-minh-city",
+  "wandb_project": "bts-nyuv2-depth-research",
+  "active_dataset": "kitti"
+}

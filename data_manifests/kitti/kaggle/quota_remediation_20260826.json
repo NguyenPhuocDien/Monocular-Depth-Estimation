@@ -1,0 +1,43 @@
+{
+  "completed_utc": "2026-08-26T10:47:44.2392773+00:00",
+  "authorized_deletions": [
+    "thudo25/batch02-16-17",
+    "thudo25/aic-batch2-k1-2-11-12"
+  ],
+  "deletions": [
+    {
+      "dataset": "thudo25/batch02-16-17",
+      "delete_output": "Dataset deleted successfully",
+      "status_query": "403 Forbidden",
+      "owner_list_query": "No datasets found",
+      "metadata_query": "403 Forbidden",
+      "verified_absent": true
+    },
+    {
+      "dataset": "thudo25/aic-batch2-k1-2-11-12",
+      "delete_output": "Dataset deleted successfully",
+      "status_query": "403 Forbidden",
+      "owner_list_query": "No datasets found",
+      "metadata_query": "403 Forbidden",
+      "verified_absent": true
+    }
+  ],
+  "datasets_owned_after": 39,
+  "private_datasets_after": 33,
+  "current_private_version_bytes_after": 150112748980,
+  "current_private_version_gb_after": 150.113,
+  "private_free_quota_gb_measured": 32.22,
+  "private_free_quota_measurement": "Kaggle Profile > Account UI: 182.53 GB used / 214.75 GB total",
+  "minimum_private_free_gb_required": 30,
+  "f1_delete_candidate_1": "passed",
+  "f2_delete_candidate_2": "passed",
+  "f3_quota_probe": "passed_measured",
+  "f_quota_gate": "pass",
+  "agent_e_upload_authorized": true,
+  "additional_deletions_performed": true,
+  "additional_cleanup_manifest": "data_manifests/kitti/kaggle/dataset_cleanup_20260826.json",
+  "kitti_upload_retried": true,
+  "kitti_upload_result": "passed",
+  "upload_receipt": "data_manifests/kitti/kaggle/upload_success_20260826.json",
+  "note": "The Account UI measurement passed the original quota gate. The owner subsequently authorized deletion of all non-Project-1 datasets; 32 were deleted and the final seven-item keep inventory matched exactly. Agent E then reused the verified materialization and created the private KITTI dataset successfully. Gate-2 is unlocked only for independent review; K0-K4 and training remain locked."
+}

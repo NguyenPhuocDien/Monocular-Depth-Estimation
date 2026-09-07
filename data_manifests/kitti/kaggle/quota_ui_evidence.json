@@ -1,0 +1,13 @@
+{
+  "measured_utc": "2026-08-26T11:01:27.0787825+00:00",
+  "quota_source": "Kaggle Profile > Account > Quotas / Private Datasets",
+  "private_quota_limit_gb": 214.75,
+  "private_quota_used_gb": 182.53,
+  "private_quota_free_gb": 32.22,
+  "minimum_required_gb": 30,
+  "evidence_reference": "User-provided screenshot of Kaggle Settings > Account showing Private Datasets 182.53 GB / 214.75 GB.",
+  "calculation": "214.75 - 182.53 = 32.22 GB free",
+  "f3_quota_probe": "passed_measured",
+  "f_quota_gate": "pass",
+  "agent_e_upload_authorized": true
+}

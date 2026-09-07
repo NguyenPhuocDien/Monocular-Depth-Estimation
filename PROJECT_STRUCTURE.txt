@@ -1,0 +1,304 @@
+==========================================================================================
+PROJECT DEPTH-RESEARCH: CẤU TRÚC VÀ PHÂN TÍCH HỆ THỐNG TOÀN DIỆN
+==========================================================================================
+
+1. TỔNG QUAN DỰ ÁN (EXECUTIVE OVERVIEW)
+------------------------------------------------------------------------------------------
+Dự án nghiên cứu và tái lập mô hình ước lượng độ sâu đơn mục (Monocular Depth Estimation)
+dựa trên kiến trúc BTS (From Big to Small: Multi-Scale Local Planar Guidance for Monocular
+Depth Estimation) trên 2 bộ dữ liệu chuẩn mực hàng đầu:
+  1. NYU Depth V2 (Môi trường trong nhà - Indoor): 24,231 ảnh train / 654 ảnh test
+  2. KITTI Raw Dataset (Môi trường ngoài trời / Xe tự hành - Outdoor): 67 archives (174.73 GB)
+
+Mục tiêu: Huấn luyện chuẩn xác 50 Epochs theo công bố bài báo gốc, tích lũy checkpoint tăng dần
+qua các phiên 12 giờ trên Kaggle (2x Tesla T4), stream dữ liệu trực tiếp lên Weights & Biases.
+
+==========================================================================================
+2. CÂY THƯ MỤC CHI TIẾT (DIRECTORY TREE STRUCTURE)
+------------------------------------------------------------------------------------------
++-- API/
+|   +-- accounts/
+|   |   +-- carlosedwards.json                     [0.1 KB]
+|   |   +-- current_active.json                    [0.1 KB]
+|   |   \-- npdnguyen.json                         [0.1 KB]
+|   +-- KITTI kaggle/
+|   +-- NYUv2 kaggle/
+|   |   +-- Carlos Edward kaggle.json              [0.1 KB]
+|   |   \-- kaggle.json                            [0.1 KB]
+|   +-- Tool/
+|   |   +-- analyze_bts_log.py                     [4.8 KB]
+|   |   +-- analyze_session2_log.py                [3.2 KB]
+|   |   +-- analyze_session3_log.py                [2.0 KB]
+|   |   +-- analyze_session3_wandb.py              [2.9 KB]
+|   |   +-- check_session4_live.py                 [2.7 KB]
+|   |   +-- deploy_to_new_kaggle.py                [6.3 KB]
+|   |   +-- fetch_kaggle_output.py                 [1.0 KB]
+|   |   +-- generate_structure_txt.py              [5.4 KB]
+|   |   +-- get_fast_session3_summary.py           [1.7 KB]
+|   |   +-- inject_wandb_to_notebook.py            [5.3 KB]
+|   |   +-- inspect_checkpoint_metrics.py          [1.6 KB]
+|   |   +-- kaggle_tool.bat                        [28.9 KB]
+|   |   +-- kdeploy.bat                            [0.2 KB]
+|   |   +-- kdeploy.py                             [19.5 KB]
+|   |   +-- monitor_kitti_download.bat             [0.1 KB]
+|   |   +-- monitor_kitti_download.ps1             [3.1 KB]
+|   |   +-- print_session4_best.py                 [1.6 KB]
+|   |   +-- update_cell2_autodetect.py             [2.6 KB]
+|   |   +-- update_checkpoint_dataset_session3.py  [1.0 KB]
+|   |   +-- update_checkpoint_dataset_session4.py  [1.0 KB]
+|   |   \-- update_notebook_resume.py              [1.7 KB]
+|   +-- config.json                            [0.3 KB]
+|   +-- kaggle.json                            [0.1 KB]
+|   \-- wandb_key.txt                          [0.1 KB]
++-- bts/
+|   +-- .git/ [HỆ THỐNG / THƯ VIỆN - ĐÃ ẨN]
+|   +-- .venv/ [HỆ THỐNG / THƯ VIỆN - ĐÃ ẨN]
+|   +-- pytorch/
+|   |   +-- __pycache__/ [HỆ THỐNG / THƯ VIỆN - ĐÃ ẨN]
+|   |   +-- models/
+|   |   |   +-- bts_nyu_kaggle_full/
+|   |   |   |   \-- summaries/
+|   |   |   |       \-- events.out.tfevents.1786773228.DESKTOP-50JQ1HB [793.7 KB]
+|   |   |   +-- bts_nyu_smoke/
+|   |   |   |   +-- summaries/
+|   |   |   |   |   +-- events.out.tfevents.1786703305.DESKTOP-50JQ1HB [0.0 KB]
+|   |   |   |   |   \-- events.out.tfevents.1786772035.DESKTOP-50JQ1HB [424.7 KB]
+|   |   |   |   +-- arguments_train_nyu_smoke.txt          [0.8 KB]
+|   |   |   |   +-- bts_dataloader.py                      [11.7 KB]
+|   |   |   |   +-- bts_main.py                            [32.3 KB]
+|   |   |   |   +-- bts_nyu_smoke.py                       [17.0 KB]
+|   |   |   |   +-- model-1                                [537.58 MB]
+|   |   |   |   \-- model-latest                           [537.59 MB]
+|   |   |   +-- bts_nyu_smoke_resume/
+|   |   |   |   +-- summaries/
+|   |   |   |   |   \-- events.out.tfevents.1786700130.DESKTOP-50JQ1HB [0.0 KB]
+|   |   |   |   +-- arguments_train_nyu_smoke_resume.txt   [0.8 KB]
+|   |   |   |   +-- bts_nyu_smoke_resume.py                [17.0 KB]
+|   |   |   |   +-- model-1                                [537.58 MB]
+|   |   |   |   \-- model-2                                [537.58 MB]
+|   |   |   +-- bts_nyu_v2_pytorch_densenet161/
+|   |   |   |   +-- __pycache__/ [HỆ THỐNG / THƯ VIỆN - ĐÃ ẨN]
+|   |   |   |   +-- arguments_train_nyu.txt                [0.5 KB]
+|   |   |   |   +-- bts_nyu_v2_pytorch_densenet161.py      [16.4 KB]
+|   |   |   |   \-- model                                  [537.30 MB]
+|   |   |   +-- eval/
+|   |   |   |   \-- bts_nyu_kaggle_full/
+|   |   |   |       \-- events.out.tfevents.1786773228.DESKTOP-50JQ1HB [62.6 KB]
+|   |   |   \-- bts_nyu_v2_pytorch_densenet161.zip     [477.26 MB]
+|   |   +-- result_bts_nyu_v2_pytorch_densenet161/ [CHỨA 4 FILE ẢNH KẾT QUẢ EVALUATION]
+|   |   +-- arguments_test_eigen.txt               [0.3 KB]
+|   |   +-- arguments_test_nyu.txt                 [0.3 KB]
+|   |   +-- arguments_train_eigen.txt              [0.9 KB]
+|   |   +-- arguments_train_nyu.txt                [0.9 KB]
+|   |   +-- arguments_train_nyu_smoke.txt          [0.8 KB]
+|   |   +-- arguments_train_nyu_smoke_resume.txt   [0.8 KB]
+|   |   +-- bts.py                                 [17.0 KB]
+|   |   +-- bts_dataloader.py                      [11.7 KB]
+|   |   +-- bts_eval.py                            [12.2 KB]
+|   |   +-- bts_live_3d.py                         [17.4 KB]
+|   |   +-- bts_main.py                            [35.2 KB]
+|   |   +-- bts_test.py                            [9.7 KB]
+|   |   +-- distributed_sampler_no_evenly_divisible.py [2.7 KB]
+|   |   +-- README.md                              [8.3 KB]
+|   |   +-- run_bts_eval_schedule.py               [1.9 KB]
+|   |   \-- run_bts_live_3d.sh                     [0.2 KB]
+|   +-- tensorflow/
+|   |   +-- custom_layer/
+|   |   |   +-- _local_planar_guidance_grad.py         [1.4 KB]
+|   |   |   +-- CMakeLists.txt                         [3.2 KB]
+|   |   |   +-- local_planar_guidance.cc               [18.0 KB]
+|   |   |   +-- local_planar_guidance.cu               [7.6 KB]
+|   |   |   \-- local_planar_guidance.h                [2.9 KB]
+|   |   +-- notebooks/
+|   |   |   \-- example_nyu_v2.py.ipynb                [6.1 KB]
+|   |   +-- arguments_test_eigen.txt               [0.3 KB]
+|   |   +-- arguments_test_nyu.txt                 [0.3 KB]
+|   |   +-- arguments_train_eigen.txt              [0.5 KB]
+|   |   +-- arguments_train_nyu.txt                [0.5 KB]
+|   |   +-- average_gradients.py                   [1.7 KB]
+|   |   +-- bts.py                                 [22.8 KB]
+|   |   +-- bts_dataloader.py                      [9.0 KB]
+|   |   +-- bts_eval.py                            [12.9 KB]
+|   |   +-- bts_live_3d.py                         [17.8 KB]
+|   |   +-- bts_main.py                            [15.3 KB]
+|   |   +-- bts_sequence.py                        [7.2 KB]
+|   |   +-- bts_test.py                            [9.8 KB]
+|   |   +-- Dockerfile                             [1.6 KB]
+|   |   +-- README.md                              [8.0 KB]
+|   |   +-- requirements.txt                       [0.0 KB]
+|   |   +-- resnet_v1.py                           [18.7 KB]
+|   |   \-- run_bts_eval_schedule.py               [1.9 KB]
+|   +-- train_test_inputs/
+|   |   +-- eigen_test_files_with_gt.txt           [99.7 KB]
+|   |   +-- eigen_train_files_with_gt.txt          [3.33 MB]
+|   |   +-- nyudepthv2_test_files_with_gt.txt      [40.7 KB]
+|   |   +-- nyudepthv2_train_files_with_gt.txt     [1.79 MB]
+|   |   \-- nyudepthv2_train_smoke.txt             [0.2 KB]
+|   +-- utils/
+|   |   +-- download_from_gdrive.py                [1.4 KB]
+|   |   +-- eval_with_pngs.py                      [8.5 KB]
+|   |   +-- extract_official_train_test_set_from_mat.py [3.7 KB]
+|   |   +-- kitti_archives_to_download.txt         [7.0 KB]
+|   |   +-- nyudepthv2_archives_to_download.txt    [2.7 KB]
+|   |   +-- splits.mat                             [2.6 KB]
+|   |   +-- sync_project_frames_multi_threads.m    [2.1 KB]
+|   |   \-- train_scenes.txt                       [4.4 KB]
+|   +-- .gitignore                             [2.2 KB]
+|   +-- COPYING                                [34.9 KB]
+|   \-- README.md                              [6.6 KB]
++-- dataset/ [DATASET FOLDER - ĐÃ ẨN CHI TIẾT (CHỨA 67 KITTI ARCHIVES 174.7GB)]
++-- kaggle_checkpoint_dataset/
+|   +-- bts_nyu_kaggle_full.py                 [17.0 KB]
+|   +-- dataset-metadata.json                  [0.1 KB]
+|   \-- model-latest                           [537.59 MB]
++-- kaggle_dataset_upload/
+|   +-- bts_kaggle_source.zip                  [579.5 KB]
+|   +-- dataset-metadata.json                  [0.1 KB]
+|   +-- densenet161-8d451a50.pth               [110.37 MB]
+|   +-- official_splits_test.zip               [149.42 MB]
+|   \-- sync.zip                               [6059.19 MB]
++-- kaggle_notebook/
+|   +-- bts-nyuv2-training.ipynb               [42.1 KB]
+|   \-- kernel-metadata.json                   [0.5 KB]
++-- kaggle_notebook_new_acc/
+|   +-- bts-nyuv2-training.ipynb               [78.6 KB]
+|   \-- kernel-metadata.json                   [0.5 KB]
++-- kaggle_notebook_pulled/
+|   +-- bts-nyuv2-training.ipynb               [40.2 KB]
+|   \-- kernel-metadata.json                   [0.6 KB]
++-- kaggle_output/
+|   +-- logs/
+|   |   \-- bts_full_train.log                     [9.76 MB]
+|   +-- models/
+|   |   +-- bts_nyu_kaggle_ddp_smoke/
+|   |   |   +-- arguments_train_nyu_kaggle_ddp_smoke.txt [0.9 KB]
+|   |   |   +-- bts_dataloader.py                      [11.7 KB]
+|   |   |   +-- bts_main.py                            [31.5 KB]
+|   |   |   \-- bts_nyu_kaggle_ddp_smoke.py            [17.0 KB]
+|   |   \-- bts_nyu_kaggle_full/
+|   |       +-- summaries/
+|   |       |   \-- events.out.tfevents.1786846192.d6b294971b0f [0.0 KB]
+|   |       +-- arguments_train_nyu_kaggle_full.txt    [1.0 KB]
+|   |       +-- bts_dataloader.py                      [11.7 KB]
+|   |       +-- bts_main.py                            [32.9 KB]
+|   |       +-- bts_nyu_kaggle_full.py                 [17.0 KB]
+|   |       +-- model-44500-best_d3_0.99641            [537.60 MB]
+|   |       +-- model-57000-best_d3_0.99624            [537.60 MB]
+|   |       +-- model-59500-best_d3_0.99609            [0.0 KB]
+|   |       +-- model-61000-best_sq_rel_0.06690        [0.0 KB]
+|   |       +-- model-63500-best_rms_0.40133           [0.0 KB]
+|   |       +-- model-72500-best_d2_0.98000            [537.60 MB]
+|   |       +-- model-72500-best_log10_0.04887         [537.61 MB]
+|   |       +-- model-72500-best_rms_0.40414           [537.61 MB]
+|   |       +-- model-73000-best_abs_rel_0.11313       [537.61 MB]
+|   |       +-- model-73000-best_log_rms_0.14645       [537.61 MB]
+|   |       +-- model-73000-best_silog_11.87810        [537.61 MB]
+|   |       +-- model-73000-best_sq_rel_0.06448        [537.61 MB]
+|   |       +-- model-74000-best_d1_0.87037            [537.60 MB]
+|   |       \-- model-latest                           [537.59 MB]
+|   +-- bts-nyuv2-training.ipynb               [7.6 KB]
+|   +-- bts-nyuv2-training.log                 [0.0 KB]
+|   \-- kernel-metadata.json                   [0.6 KB]
++-- kaggle_output_carlos/
+|   +-- logs/
+|   |   \-- bts_full_train.log                     [9.27 MB]
+|   +-- models/
+|   |   +-- bts_nyu_kaggle_full/
+|   |   |   +-- summaries/
+|   |   |   |   \-- events.out.tfevents.1786957629.91bdca0ab40f [957.95 MB]
+|   |   |   +-- arguments_train_nyu_kaggle_full.txt    [1.0 KB]
+|   |   |   +-- bts_nyu_kaggle_full.py                 [17.0 KB]
+|   |   |   +-- model-135500-best_d2_0.98032           [537.61 MB]
+|   |   |   +-- model-141500-best_abs_rel_0.11006      [537.61 MB]
+|   |   |   +-- model-142000-best_d1_0.87771           [537.61 MB]
+|   |   |   +-- model-142000-best_log10_0.04780        [537.61 MB]
+|   |   |   +-- model-142000-best_log_rms_0.14332      [537.61 MB]
+|   |   |   +-- model-142000-best_rms_0.39568          [537.61 MB]
+|   |   |   +-- model-142000-best_silog_11.65471       [537.61 MB]
+|   |   |   \-- model-latest                           [537.59 MB]
+|   |   \-- eval/
+|   |       \-- bts_nyu_kaggle_full/
+|   |           \-- events.out.tfevents.1786957629.91bdca0ab40f [57.7 KB]
+|   \-- bts-nyuv2-training.log                 [119.1 KB]
++-- kaggle_output_carlos_session3/
+|   +-- logs/
+|   |   \-- bts_full_train.log                     [9.49 MB]
+|   +-- models/
+|   |   +-- bts_nyu_kaggle_full/
+|   |   |   +-- summaries/
+|   |   |   |   \-- events.out.tfevents.1787029044.2ebd2eb4db55 [948.33 MB]
+|   |   |   +-- arguments_train_nyu_kaggle_full.txt    [1.0 KB]
+|   |   |   +-- bts_nyu_kaggle_full.py                 [17.0 KB]
+|   |   |   +-- model-168500-best_d2_0.98058           [537.61 MB]
+|   |   |   +-- model-179500-best_log_rms_0.14318      [537.61 MB]
+|   |   |   +-- model-179500-best_silog_11.57404       [537.61 MB]
+|   |   |   +-- model-179500-best_sq_rel_0.06400       [537.61 MB]
+|   |   |   +-- model-196000-best_d1_0.88048           [537.61 MB]
+|   |   |   \-- model-latest                           [537.59 MB]
+|   |   \-- eval/
+|   |       \-- bts_nyu_kaggle_full/
+|   |           \-- events.out.tfevents.1787029044.2ebd2eb4db55 [57.3 KB]
+|   \-- bts-nyuv2-training.log                 [113.1 KB]
++-- kaggle_output_v14/
+|   +-- logs/
+|   |   \-- bts_full_train.log                     [9.31 MB]
+|   \-- models/
+|       \-- bts_nyu_kaggle_full/
+|           +-- arguments_train_nyu_kaggle_full.txt    [1.0 KB]
+|           +-- bts_dataloader.py                      [11.7 KB]
+|           +-- bts_main.py                            [32.9 KB]
+|           +-- bts_nyu_kaggle_full.py                 [17.0 KB]
+|           \-- model-59500-best_d3_0.99609            [0.0 KB]
++-- kaggle_pulled_carlos/
+|   \-- bts-nyuv2-training.ipynb               [38.2 KB]
++-- wandb/
+|   \-- run-20260817_160716-2cr3v8yv/
+|       +-- files/
+|       |   +-- config.yaml                            [0.9 KB]
+|       |   +-- output.log                             [0.5 KB]
+|       |   +-- requirements.txt                       [1.4 KB]
+|       |   +-- wandb-metadata.json                    [0.4 KB]
+|       |   \-- wandb-summary.json                     [0.1 KB]
+|       +-- logs/
+|       |   +-- debug-core.log                         [5.9 KB]
+|       |   +-- debug-internal.log                     [1.9 KB]
+|       |   \-- debug.log                              [2.7 KB]
+|       +-- tmp/
+|       |   \-- code/
+|       +-- run-2cr3v8yv.wandb                     [2.1 KB]
+|       \-- run-2cr3v8yv.wandb.syncstate           [0.0 KB]
++-- activate_env.cmd                       [0.4 KB]
++-- bts_kaggle_source.zip                  [579.7 KB]
++-- densenet161-8d451a50.pth               [110.37 MB]
++-- official_splits_test.zip               [149.42 MB]
+\-- project_tree_detailed.txt              [4.48 MB]
+
+==========================================================================================
+3. PHÂN TÍCH CHỨC NĂNG CÁC THÀNH PHẦN CHÍNH (COMPONENT BREAKDOWN)
+------------------------------------------------------------------------------------------
+
+[1] THƯ MỤC /API/:
+    - kaggle.json: File cấu hình thông tin định danh API tài khoản Kaggle hiện tại (Carlos Edward).
+    - wandb_key.txt: API Key kết nối Cloud Dashboard Weights & Biases để stream loss/metric real-time.
+    - NYUv2 kaggle/ & KITTI kaggle/: Lưu trữ các tài khoản Kaggle phụ dùng để luân chuyển quota khi hết 30h.
+    - Tool/deploy_to_new_kaggle.py: Script tự động đóng gói checkpoint dataset và đẩy notebook lên Kaggle.
+    - Tool/inject_wandb_to_notebook.py: Script nhúng thư viện WandB và patch bts_main.py tự động.
+    - Tool/analyze_bts_log.py: Bộ phân tích log huấn luyện trích xuất 9 metrics và đồ thị hội tụ.
+    - Tool/fetch_kaggle_output.py: Công cụ tải log và checkpoint model-latest từ Kaggle về local.
+
+[2] THƯ MỤC /bts/ (MÃ NGUỒN HUẤN LUYỆN CHÍNH):
+    - bts/pytorch/bts_main.py: Trọng tâm huấn luyện BTS PyTorch, chứa DDP (DistributedDataParallel), 
+      LPG (Local Planar Guidance layers), SILog loss criterion, WandB real-time logger và checkpoint auto-resume.
+    - bts/pytorch/bts.py: Định nghĩa kiến trúc mạng BTS (DenseNet161 Encoder + Multi-Scale LPG Decoder).
+    - bts/pytorch/bts_dataloader.py: Pipeline đọc dữ liệu NYUv2 / KITTI, biến đổi dữ liệu (Random Crop, Rotate, Flip).
+    - bts/pytorch/arguments_train_nyu_kaggle_full.txt: Cấu hình tham số chuẩn xác 100% theo bài báo BTS gốc.
+    - bts/pytorch/models/: Chứa các checkpoint trọng số đã huấn luyện (model-latest, model-best-*, events.out.tfevents).
+
+[3] THƯ MỤC /kaggle_notebook_new_acc/:
+    - bts-nyuv2-training.ipynb: Notebook chạy trên Kaggle kết hợp DDP 2x Tesla T4, nạp checkpoint tự động và stream WandB.
+    - kernel-metadata.json: Metadata liên kết notebook với GPU T4 x2 và các dataset gắn kèm.
+
+[4] THƯ MỤC /dataset/ (ĐÃ LOẠI TRỪ CHI TIẾT TRONG CÂY):
+    - G:\depth-research\dataset\kitti_dataset: Đã tải và xác thực hoàn tất 67/67 file zip (174.73 GB) KITTI Raw.
+
+==========================================================================================

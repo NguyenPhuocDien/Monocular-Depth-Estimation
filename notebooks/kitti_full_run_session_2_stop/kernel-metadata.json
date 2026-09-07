@@ -1,0 +1,16 @@
+{
+  "id": "thudo25/bts-kitti-full-run-01-session-2",
+  "title": "BTS KITTI Full Run 01 Session 2 Superseded",
+  "code_file": "stop_session_2.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [],
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

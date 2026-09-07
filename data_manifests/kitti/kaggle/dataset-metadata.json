@@ -1,0 +1,10 @@
+{
+  "title": "BTS KITTI Eigen Materialized V1",
+  "id": "thudo25/bts-kitti-eigen-materialized-v1",
+  "licenses": [
+    {
+      "name": "other"
+    }
+  ],
+  "description": "Private byte-identical selection of official KITTI files referenced by cleinc/bts Eigen train/test lists at commit 5e3406b. No image or ground-truth re-encoding."
+}

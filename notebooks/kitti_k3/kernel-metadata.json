@@ -1,0 +1,21 @@
+{
+  "id": "thudo25/bts-kitti-k3-tiny-train-gate",
+  "title": "BTS KITTI K3 Tiny Train Gate",
+  "code_file": "k3_tiny_train.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [],
+  "dataset_sources": [
+    "thudo25/bts-kitti-eigen-materialized-v1",
+    "thudo25/bts-kitti-runtime-5e3406b-v1",
+    "thudo25/bts-densenet161-imagenet-weight-v1"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": [],
+  "machine_shape": "NvidiaTeslaT4"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "thudo25/bts-nyuv2-training",
+  "title": "bts-nyuv2-training",
+  "code_file": "bts-nyuv2-training.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "keywords": [
+    "gpu"
+  ],
+  "dataset_sources": [
+    "npdnguyen/bts-nyuv2-full-training",
+    "thudo25/bts-nyuv2-checkpoint"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": [],
+  "machine_shape": "NvidiaTeslaT4"
+}

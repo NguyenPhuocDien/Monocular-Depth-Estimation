@@ -1,0 +1,23 @@
+{
+  "id": "thudo25/bts-kitti-full-run-02-session-8",
+  "title": "BTS KITTI Full Run 02 Session 8",
+  "code_file": "session_8.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [],
+  "dataset_sources": [
+    "thudo25/bts-kitti-eigen-materialized-v1",
+    "thudo25/bts-kitti-runtime-5e3406b-v4-2xt4",
+    "thudo25/bts-densenet161-imagenet-weight-v1",
+    "thudo25/bts-kitti-full-run-02-freeze-v4",
+    "thudo25/bts-kitti-full-run-02-handoff"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": [],
+  "machine_shape": "NvidiaTeslaT4"
+}
