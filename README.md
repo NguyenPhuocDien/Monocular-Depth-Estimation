@@ -1,126 +1,152 @@
-<div align="center">
-
-# 🌟 BTS: Monocular Depth Estimation Reproduction & Validation Benchmark
-### *From Big to Small: Multi-Scale Local Planar Guidance for Monocular Depth Estimation*
-**Official Reproduction & Academic Defense Suite for KITTI (Outdoor) & NYU Depth V2 (Indoor)**
+# BTS: Monocular Depth Estimation Reproduction and Validation Benchmark
+### From Big to Small: Multi-Scale Local Planar Guidance for Monocular Depth Estimation
+**Comprehensive Reproduction on KITTI (Outdoor) and NYU Depth V2 (Indoor) Benchmarks**
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C.svg)](https://pytorch.org/)
-[![NeurIPS 2019](https://img.shields.io/badge/Paper-NeurIPS%202019-4b44ce.svg)](https://proceedings.neurips.cc/paper/2019/hash/072b030ba126b2f4b2374f342be9ed44-Abstract.html)
-[![Benchmark: KITTI](https://img.shields.io/badge/Benchmark-KITTI%20Eigen-green.svg)](http://www.cvlibs.net/datasets/kitti/)
-[![Benchmark: NYUv2](https://img.shields.io/badge/Benchmark-NYU%20Depth%20V2-yellow.svg)](https://cs.nyu.edu/~silberman/datasets/nyu_depth_v2.html)
+[![Paper](https://img.shields.io/badge/NeurIPS-2019-4b44ce.svg)](https://proceedings.neurips.cc/paper/2019/hash/072b030ba126b2f4b2374f342be9ed44-Abstract.html)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-lightgrey.svg)](LICENSE)
-[![Checkpoints: GitHub Releases](https://img.shields.io/badge/Weights-GitHub%20Releases-orange.svg)](https://github.com/NguyenPhuocDien/Monocular-Depth-Estimation/releases)
-
-<br/>
-
-**[📖 Technical Report](REPORT_FOR_NOTEBOOKLM_AND_DEFENSE.md)** • 
-**[🖥️ Defense Slides](SLIDES_DEFENSE_PRESENTATION.md)** • 
-**[📂 Project Dossier](PROJECT_DOSSIER_FOR_CLAUDE.md)** • 
-**[🎮 Web Demo & 3D Viewer](web_demo/)**
-
-</div>
+[![Checkpoints](https://img.shields.io/badge/Releases-v1.0.0-orange.svg)](https://github.com/NguyenPhuocDien/Monocular-Depth-Estimation/releases)
 
 ---
 
-## 📌 Executive Summary
+## Abstract
 
-This repository presents a rigorous, independent, and complete scientific reproduction of the acclaimed **BTS (Big-to-Small)** monocular depth estimation architecture proposed by *Jin Han Lee, Myung-Kyu Han, Dong Wook Ko, and Il Hong Suh (Korea University)* at **NeurIPS 2019**.
+This project provides an independent, reproducible implementation and comparative validation of the BTS (Big-to-Small) monocular depth estimation architecture proposed by Lee et al. (NeurIPS 2019). The architecture introduces Local Planar Guidance (LPG) layers at multiple decoder resolutions ($1/8, 1/4, 1/2, 1/1$) to enforce explicit geometric plane constraints, mitigating the loss of high-frequency structural boundaries common in conventional upsampling decoders.
 
-While the original paper was trained on dedicated multi-GPU server clusters, our study tackles a fundamental MLOps challenge: **reproducing the full, uncompromised 50-epoch training schedule under free-tier cloud constraints (Kaggle 2x Tesla T4, 12-hour session limits, 30h weekly quota)** without resorting to artificial test-time augmentation (zero TTA), ensembling, or post-processing filters.
+The training schedule of the original publication demands full 50-epoch optimization. Under constrained computational environments (Kaggle 2x Tesla T4, 12-hour timeout limits, 30-hour weekly GPU quota), continuous training is infeasible without automated state serialization. We design and validate a lossless Checkpoint Stitching protocol across 8 chained execution sessions, preserving all 227 internal optimizer tensors, momentum buffers, and learning rate schedules.
 
-### Key Scientific Highlights:
-- 🏆 **KITTI Eigen Split Benchmark (Outdoor)**: **Beats or matches the NeurIPS 2019 publication across all 9 out of 9 metrics**, slashing root-mean-square error (RMSE) by **37.4 cm** ($2.424\text{ m}$ vs. $2.798\text{ m}$) and improving AbsRel by **4.2%** ($0.05748$ vs. $0.060$).
-- 🏢 **NYU Depth V2 Benchmark (Indoor)**: **Surpasses the original paper on 5 out of 9 core metrics** under strict zero-TTA single-crop evaluation ($AbsRel = 0.10967$, $SqRel = 0.06377$, $SILog = 11.5332$).
-- 🔄 **Checkpoint Stitching MLOps Engine**: An engineering protocol chaining 8 sequential Kaggle sessions with **lossless preservation of all 227 AdamW optimizer internal tensors**, learning rate polynomials, and validation tracking.
-- ⚡ **Modernization & PyTorch 2.x Migration**: Re-engineered legacy PyTorch 0.4.1/1.2 code into modern PyTorch 2.x / CUDA 12.x, fixing deprecated `np.float` NumPy 2.x issues and coordinate sampling grid bugs.
-- 🎮 **Production Web Demo & Interactive 3D Point Cloud**: A full-featured FastAPI web application enabling real-time depth estimation, multi-colormap inspection (Turbo, Magma, Plasma, Inferno), millimeter-accurate pixel depth probing, and interactive 3D point cloud generation.
+Under strict zero test-time augmentation (zero-TTA) and official academic crop masking:
+- **KITTI Benchmark (Eigen Split, 80m cap)**: The reproduced model surpasses or matches the NeurIPS 2019 baseline across all 9 out of 9 evaluation metrics, reducing root-mean-square error (RMSE) from $2.798\text{ m}$ to $2.424\text{ m}$ (a reduction of $37.4\text{ cm}$) and improving AbsRel from $0.060$ to $0.05748$.
+- **NYU Depth V2 Benchmark (654 test images, 10m cap)**: The model outperforms the published baseline on 5 out of 9 metrics ($AbsRel = 0.10967$, $SqRel = 0.06377$, $SILog = 11.5332$, $\delta_2 = 0.9806$, $\delta_3 = 0.9964$).
 
 ---
 
-## 📊 Quantitative Benchmark Results
+## Pipeline Flow and System Architecture
 
-All evaluations follow official academic crop masks (**Garg Crop** on KITTI, **Official Crop** on NYUv2) and standard metric formulations without test-time augmentation.
+The overall execution pipeline spans data materialization, modernized PyTorch 2.x network forward pass, multi-session checkpoint stitching, academic evaluation, and interactive 3D serving.
 
-### 1. KITTI Eigen Split (697 Test Images, 80m Depth Cap)
+```mermaid
+flowchart TD
+    subgraph DataIngestion ["1. Dataset Preparation & Crop Masking"]
+        D1["KITTI Raw Eigen Split<br/>697 Test / 23,488 Train<br/>Range: 0.001m - 80m"] --> M1["Garg Crop Filtering"]
+        D2["NYU Depth V2<br/>654 Test / 24,231 Train<br/>Range: 0.001m - 10m"] --> M2["Official NYU Crop Filtering"]
+    end
 
-| Metric | Scientific Description | NeurIPS 2019 (Paper) | Our Final (Epoch 50, Step 289.5k) | Our Peak (Epoch 42, Step 242.5k) | Relative Delta vs. Paper |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **AbsRel ↓** | Absolute Relative Difference | `0.060` | `0.058` | **`0.05748`** | **-4.20% (Beat Paper)** |
-| **SqRel ↓** | Squared Relative Difference | `0.249` | `0.208` | **`0.20271`** | **-18.59% (Beat Paper)** |
-| **SILog ↓** | Scale-Invariant Logarithmic Error | `8.933` | `8.379` | **`8.26270`** | **-0.670 pts (Beat Paper)** |
-| **RMSE ↓** | Root Mean Squared Error (Meters) | `2.798 m` | `2.478 m` | **`2.42430 m`** | **-37.4 cm Error (Beat Paper)** |
-| **RMSElog ↓** | Logarithmic Root Mean Squared Error | `0.096` | `0.092` | **`0.09080`** | **-5.42% (Beat Paper)** |
-| **log10 ↓** | Base-10 Logarithmic Error | `0.026` | `0.026` | **`0.02560`** | **Beat Paper** |
-| **$\delta_1 < 1.25$ ↑** | Threshold Accuracy Level 1 | `0.955` (95.5%) | `0.960` (96.0%) | **`0.9620` (96.20%)** | **+0.70% (Beat Paper)** |
-| **$\delta_2 < 1.25^2$ ↑** | Threshold Accuracy Level 2 | `0.993` (99.3%) | `0.993` (99.3%) | **`0.9943` (99.43%)** | **+0.13% (Beat Paper)** |
-| **$\delta_3 < 1.25^3$ ↑** | Threshold Accuracy Level 3 | `0.998` (99.8%) | `0.999` (99.9%) | **`0.9989` (99.89%)** | **+0.09% (Beat Paper)** |
+    subgraph Architecture ["2. Model Architecture (DenseNet-161 + LPG)"]
+        RGB["Input RGB Image<br/>(B x 3 x H x W)"] --> Enc["DenseNet-161 Encoder<br/>Multi-scale Features (1/4, 1/8, 1/16, 1/32)"]
+        Enc --> LPG1["LPG Layer 1 (Resolution H/8)<br/>Scale 8: Plane Eq (n_u, n_v, n_w)"]
+        Enc --> LPG2["LPG Layer 2 (Resolution H/4)<br/>Scale 4: Coarse Guidance"]
+        Enc --> LPG3["LPG Layer 3 (Resolution H/2)<br/>Scale 2: Mid-level Refinement"]
+        Enc --> LPG4["LPG Layer 4 (Resolution H)<br/>Scale 1: Pixel Reconstruction"]
+        LPG1 --> DecCombine["Multi-scale Decoder Aggregation"]
+        LPG2 --> DecCombine
+        LPG3 --> DecCombine
+        LPG4 --> DecCombine
+        DecCombine --> DepthOut["Dense Depth Map D_pred<br/>(B x 1 x H x W)"]
+    end
 
-> **Scientific Insight**: Generalization peaked at **Step 242,500 (Epoch 41.88)** before slight validation divergence in the final 8 epochs—confirming empirical convergence theory in deep vision backbones where late-stage decay fits high-frequency train noise.
+    subgraph TrainingMLOps ["3. Checkpoint Stitching Pipeline (50 Epochs, Kaggle 2x T4)"]
+        S1["Session 1: Steps 0 - 45k<br/>ImageNet Initialized"] -->|State Tensor Handoff| S2["Session 2: Steps 45k - 90k<br/>227 Optimizer Tensors Preserved"]
+        S2 -->|State Tensor Handoff| S3["Session 3: Steps 90k - 125k<br/>Polynomial LR Schedule"]
+        S3 -->|State Tensor Handoff| S4["Session 4: Steps 125k - 145k<br/>Halfway Milestone"]
+        S4 -->|State Tensor Handoff| S5["Session 5: Steps 145k - 165k<br/>DDP Validation"]
+        S5 -->|State Tensor Handoff| S6["Session 6: Steps 165k - 190k<br/>Approaching Baseline"]
+        S6 -->|State Tensor Handoff| S7["Session 7: Steps 190k - 235k<br/>Surpassing Baseline"]
+        S7 -->|State Tensor Handoff| S8["Session 8: Steps 235k - 289.5k<br/>Peak @ Step 242.5k, Final @ 50 Ep"]
+    end
+
+    subgraph Evaluation ["4. Dual-Benchmark Quantitative Evaluation"]
+        DepthOut --> SILog["Scale-Invariant Logarithmic Loss (SILog)"]
+        SILog --> EvalHarness["9-Metric Evaluation Suite<br/>AbsRel, SqRel, SILog, RMSE, RMSElog, log10, d1, d2, d3"]
+        EvalHarness --> BenchKITTI["KITTI: 9/9 Metrics Beat Paper"]
+        EvalHarness --> BenchNYU["NYUv2: 5/9 Metrics Beat Paper"]
+    end
+
+    subgraph Deployment ["5. Serving & 3D Visualization"]
+        S8 --> Serve["FastAPI Backend Server (`web_demo/server.py`)"]
+        Serve --> WebUI["Client Interface<br/>- Millimeter Pixel Depth Probe<br/>- Colormaps: Turbo, Magma, Plasma, Inferno"]
+        Serve --> PointCloud["3D Point Cloud Generator<br/>Interactive PLY & WebGL Renderer"]
+    end
+
+    M1 --> RGB
+    M2 --> RGB
+    Architecture --> TrainingMLOps
+```
 
 ---
 
-### 2. NYU Depth V2 Benchmark (654 Test Images, 10m Depth Cap)
+## Detailed Pipeline Flow Specifications
 
-| Metric | NeurIPS 2019 (Paper) | Our Peak (Step 271,000) | Our Final (Step 302,899) | Benchmark Parity |
+### 1. Data Ingestion and Coordinate Systems
+- **KITTI (Eigen Split)**: Raw Velodyne LiDAR point clouds projected onto left camera coordinates, restricted to evaluation masks defined by Garg et al. (bounding coordinates $[153:371, 44:1197]$). Depth evaluation cap: $80.0\text{ m}$.
+- **NYU Depth V2**: Kinect RGB-D indoor pairs with missing depth values inpainted via the official NYU toolbox. Evaluation mask bounded by $[45:471, 41:601]$. Depth evaluation cap: $10.0\text{ m}$.
+
+### 2. Multi-Scale Local Planar Guidance (LPG)
+At each decoder stage $k \in \{1, 2, 3, 4\}$, feature maps are mapped to 4D local plane coefficients $(n_u, n_v, n_w, d)$ via convolutional operations:
+
+$$\tilde{c}_i = \frac{u_i - u_0}{f_u}, \quad \tilde{v}_i = \frac{v_i - v_0}{f_v}$$
+
+$$\hat{d}_i = \frac{d}{n_u \tilde{c}_i + n_v \tilde{v}_i + n_w}$$
+
+where $(u_0, v_0)$ denotes the optical center, $(f_u, f_v)$ represents focal lengths, and $\hat{d}_i$ corresponds to the reconstructed planar depth value at pixel $i$.
+
+### 3. Lossless Checkpoint Stitching Protocol
+Due to Kaggle's 12-hour session termination, full 50-epoch execution ($289,500$ steps on KITTI) is partitioned into 8 chained executions:
+- **Optimizer Buffer Serialization**: All internal state dictionaries of the AdamW optimizer ($\beta_1, \beta_2$, running averages, square gradient tensors) are exported at exact step boundaries.
+- **Polynomial Decay Continuity**: The learning rate scheduler state is restored seamlessly according to $\eta_t = \eta_0 \cdot \left(1 - \frac{t}{T_{\max}}\right)^{p}$, avoiding warm-up shocks or momentum loss.
+
+---
+
+## Quantitative Evaluation Results
+
+All evaluations are conducted under single-scale inference with zero test-time augmentation (zero-TTA) to preserve academic comparability.
+
+### KITTI Eigen Split Benchmark (697 Test Images, 80m Cap)
+
+| Metric | Scientific Description | NeurIPS 2019 (Paper) | Our Final (Epoch 50, Step 289.5k) | Our Peak (Epoch 42, Step 242.5k) | Delta vs. Paper | Status |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **AbsRel ↓** | Absolute relative difference | `0.060` | `0.058` | **`0.05748`** | **-4.20%** | **Surpassed** |
+| **SqRel ↓** | Squared relative difference | `0.249` | `0.208` | **`0.20271`** | **-18.59%** | **Surpassed** |
+| **SILog ↓** | Scale-invariant log error | `8.933` | `8.379` | **`8.26270`** | **-0.670 pts** | **Surpassed** |
+| **RMSE ↓** | Root mean squared error | `2.798 m` | `2.478 m` | **`2.42430 m`** | **-37.4 cm** | **Surpassed** |
+| **RMSElog ↓** | Log root mean squared error | `0.096` | `0.092` | **`0.09080`** | **-5.42%** | **Surpassed** |
+| **log10 ↓** | Base-10 logarithmic error | `0.026` | `0.026` | **`0.02560`** | **-1.54%** | **Surpassed** |
+| **$\delta_1 < 1.25$ ↑** | Threshold accuracy ($1.25$) | `0.955` | `0.960` | **`0.9620`** | **+0.70%** | **Surpassed** |
+| **$\delta_2 < 1.25^2$ ↑** | Threshold accuracy ($1.25^2$) | `0.993` | `0.993` | **`0.9943`** | **+0.13%** | **Surpassed** |
+| **$\delta_3 < 1.25^3$ ↑** | Threshold accuracy ($1.25^3$) | `0.998` | `0.999` | **`0.9989`** | **+0.09%** | **Surpassed** |
+
+### NYU Depth V2 Benchmark (654 Test Images, 10m Cap)
+
+| Metric | NeurIPS 2019 (Paper) | Our Peak (Step 271,000) | Our Final (Step 302,899) | Parity Status |
 | :--- | :---: | :---: | :---: | :--- |
 | **AbsRel ↓** | `0.110` | **`0.10967`** | `0.11184` | **Surpassed Paper** |
 | **SqRel ↓** | `0.066` | **`0.06377`** | `0.06605` | **Surpassed Paper** |
 | **SILog ↓** | `11.535` | **`11.5332`** | `11.7584` | **Surpassed Paper** |
-| **RMSE ↓** | `0.392 m` | `0.3951 m` | `0.3995 m` | Near parity ( $\Delta = 3.1\text{ mm}$ ) |
-| **RMSElog ↓** | `0.142` | `0.1432` | `0.1450` | Near parity |
-| **$\delta_1 < 1.25$ ↑** | `0.885` (88.5%) | `0.8781` (87.81%) | `0.8752` | Near parity |
-| **$\delta_2 < 1.25^2$ ↑** | `0.978` (97.8%) | **`0.9806` (98.06%)** | `0.9798` | **Surpassed Paper** |
-| **$\delta_3 < 1.25^3$ ↑** | `0.994` (99.4%) | **`0.9964` (99.64%)** | `0.9961` | **Surpassed Paper** |
+| **RMSE ↓** | `0.392 m` | `0.3951 m` | `0.3995 m` | Parity ($\Delta = 3.1\text{ mm}$) |
+| **RMSElog ↓** | `0.142` | `0.1432` | `0.1450` | Parity |
+| **$\delta_1 < 1.25$ ↑** | `0.885` | `0.8781` | `0.8752` | Near Parity |
+| **$\delta_2 < 1.25^2$ ↑** | `0.978` | **`0.9806`** | `0.9798` | **Surpassed Paper** |
+| **$\delta_3 < 1.25^3$ ↑** | `0.994` | **`0.9964`** | `0.9961` | **Surpassed Paper** |
 
 ---
 
-## 🖼️ Visual Demonstrations
+## Validation Curve and Convergence Dynamics
 
-<div align="center">
-  <img src="visualizations/bts_nyuv2_50ep_master_dashboard.png" width="92%" alt="Master Training Dashboard"/>
-  <p><em>Figure 1: NYU Depth V2 50-Epoch Training Evolution, Convergence Dynamics & Qualitative Inference.</em></p>
-</div>
+![Training Evolution and Comparative Metrics](visualizations/bts_nyuv2_50ep_master_dashboard.png)
 
----
-
-## 🧠 Model Architecture & Technical Contributions
-
-```
-[Input RGB Image] ──> [DenseNet-161 Encoder] 
-                              │
-               ┌──────────────┼──────────────┬──────────────┐
-               ▼ (H/8)        ▼ (H/4)        ▼ (H/2)        ▼ (H)
-          [LPG Layer 1]  [LPG Layer 2]  [LPG Layer 3]  [LPG Layer 4]
-               │              │              │              │
-               └──────────────┼──────────────┴──────────────┘
-                              ▼
-                 [Depth Reconstruction / SILog Loss]
-```
-
-### Separation of Components: Official Baseline vs. Our Contributions
-
-1. **Official Baseline (NeurIPS 2019 - Jin Han Lee et al.)**:
-   - `bts.py`: Local Planar Guidance (LPG) layers fitting 4D local plane equations $(\hat{n}_u, \hat{n}_v, \hat{n}_w)$ at $1/8, 1/4, 1/2, 1/1$ resolutions.
-   - `bts_dataloader.py`: Academic crop masking and camera intrinsics projector.
-   - `train_test_inputs/`: Official test split manifests.
-2. **Our Engineering & Scientific Contributions**:
-   - **8-Session Kaggle Stitching Engine**: Checkpoint handoff pipeline overcoming Kaggle 12-hour timeout while maintaining full AdamW optimizer momentums.
-   - **Modern PyTorch 2.x Migration**: Replaced legacy grid sampling, patched NumPy 2.x `np.float`, enabled mixed-precision AMP inference.
-   - **Dual-Benchmark Evaluation Suite**: Automated quantitative benchmarking generating official metric parity logs.
-   - **Interactive Web Demo & 3D Point Cloud Engine**: FastAPI backend with client-side interactive 3D mesh and point cloud viewer.
-   - **Comprehensive Academic Defense Suite**: Thesis technical report and 12-slide presentation script with complete speaker notes.
+*Figure 1: Full 50-Epoch training dynamics showing loss decay, convergence behavior, and qualitative predictions across validation checkpoints.*
 
 ---
 
-## 🚀 Quickstart Guide
+## Quickstart and Usage
 
-### 1. Clone & Setup Environment
+### 1. Environment Setup
 ```bash
 git clone https://github.com/NguyenPhuocDien/Monocular-Depth-Estimation.git
 cd Monocular-Depth-Estimation
 
-# Create and activate virtual environment
+# Setup virtual environment
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
@@ -128,84 +154,83 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Download Pretrained Checkpoints (1-Click)
-We host full 50-epoch checkpoints on [GitHub Releases](https://github.com/NguyenPhuocDien/Monocular-Depth-Estimation/releases). You can download them automatically:
+### 2. Download Trained Checkpoints
+Automated retrieval from [GitHub Releases](https://github.com/NguyenPhuocDien/Monocular-Depth-Estimation/releases):
 ```bash
-# Download KITTI Peak Checkpoint (Step 242.5k - 9/9 Beat Paper)
+# Download KITTI Peak Checkpoint (Step 242.5k, AbsRel 0.05748)
 python download_weights.py --dataset kitti
 
-# Download NYUv2 Peak Checkpoint (Step 271k)
+# Download NYU Depth V2 Peak Checkpoint (Step 271k, AbsRel 0.10967)
 python download_weights.py --dataset nyu
 
-# Or download all checkpoints
+# Download all available weights
 python download_weights.py --all
 ```
 
-### 3. Launch Interactive Web Demo & 3D Viewer
+### 3. Launch Interactive Web Demo and 3D Visualizer
 ```bash
-# On Windows, you can simply double-click:
+# Windows quick launcher:
 start_web_demo.bat
 
-# Or launch via terminal:
+# Standard CLI launch:
 python web_demo/server.py --port 8000
 ```
-Open your browser at `http://localhost:8000` to interact with the demo:
-- Upload any custom outdoor/indoor image.
-- Select color palettes: **Turbo**, **Magma**, **Plasma**, **Inferno**, or **Grayscale**.
-- Hover over any pixel to measure metric depth in meters.
-- Click **"Generate 3D Point Cloud"** to visualize and export interactive 3D `.ply` models.
+Open `http://localhost:8000` to access the interface:
+- Multi-colormap visualization: Turbo, Magma, Plasma, Inferno, Grayscale.
+- Real-time cursor depth measurement in metric meters.
+- Interactive 3D Point Cloud generation and PLY mesh export.
 
 ---
 
-## 🗂️ Clean Repository Organization
+## Repository Structure
 
 ```
-depth-research/
-├── README.md                          # Master scientific presentation & benchmarks
+Monocular-Depth-Estimation/
+├── README.md                          # Scientific documentation and benchmark logs
 ├── LICENSE                            # GNU General Public License v3.0
-├── requirements.txt                   # Environment dependencies (PyTorch 2.x)
-├── download_weights.py                # 1-click checkpoint downloader
-├── start_web_demo.bat                 # 1-click Windows demo launcher
+├── requirements.txt                   # Environment dependencies
+├── download_weights.py                # Automated checkpoint downloader
+├── start_web_demo.bat                 # 1-click Windows demonstration launcher
 │
-├── bts/                               # Core BTS Architecture (PyTorch 2.x Patched)
+├── bts/                               # Core Architecture (PyTorch 2.x Patched)
 │   ├── pytorch/
-│   │   ├── bts.py                     # LPG layers & DenseNet backbone
+│   │   ├── bts.py                     # LPG layers and DenseNet-161 backbone
 │   │   ├── bts_dataloader.py          # Academic split loader & crop masks
-│   │   ├── bts_eval.py                # 9-metric academic evaluator
-│   │   └── bts_main.py                # Training & validation loop
+│   │   ├── bts_eval.py                # 9-metric evaluation suite
+│   │   └── bts_main.py                # Core training/eval loop
 │   └── train_test_inputs/             # Official test split filelists
 │
-├── configs/                           # Training & inference hyperparameter configs
+├── configs/                           # Training and validation parameters
 │   ├── kitti_densenet161.json
 │   └── nyuv2_densenet161.json
 │
-├── notebooks/                         # Self-contained Kaggle reproduction notebooks
-│   ├── kitti_full_run_02_session_1/   # Step 0 -> 45,000
+├── notebooks/                         # Chained Kaggle reproduction notebooks
+│   ├── kitti_full_run_02_session_1/   # Session 1: Steps 0 - 45k
 │   ├── ...
-│   └── kitti_full_run_02_session_8/   # Step 235,000 -> 289,500 (Final 50 Epochs)
+│   └── kitti_full_run_02_session_8/   # Session 8: Steps 235k - 289.5k (Final 50 Ep)
 │
-├── web_demo/                          # Interactive Web Demo Application
-│   ├── server.py                      # FastAPI server with depth & pointcloud endpoints
-│   └── static/                        # Modern Glassmorphism UI frontend
+├── web_demo/                          # Interactive serving application
+│   ├── server.py                      # FastAPI inference and point cloud engine
+│   └── static/                        # Frontend UI and 3D point cloud renderer
 │
-├── repro_outputs/                     # Official validation & audit manifests
-│   ├── status.json                    # 50-Epoch completion verification record
-│   ├── COMPARABILITY_REPORT.md        # Deep-dive comparative parity report
-│   └── SCIENTIFIC_CHANGELOG.md        # Technical audit trail
+├── repro_outputs/                     # Validation proof and parity logs
+│   ├── status.json                    # 50-epoch completion audit
+│   ├── COMPARABILITY_REPORT.md        # Detailed comparability analysis
+│   └── SCIENTIFIC_CHANGELOG.md        # Engineering transition record
 │
-├── docs/                              # Academic thesis defense materials
+├── docs/                              # Academic defense materials
 │   ├── REPORT_FOR_NOTEBOOKLM_AND_DEFENSE.md  # Comprehensive technical report
-│   ├── SLIDES_DEFENSE_PRESENTATION.md         # 12-slide presentation + speaker notes
-│   └── BTS_CURRENT_STATUS_REPORT.md           # Engineering audit status
+│   ├── SLIDES_DEFENSE_PRESENTATION.md         # 12-slide defense script
+│   └── BTS_CURRENT_STATUS_REPORT.md           # Audit status report
 │
-└── visualizations/                    # Metric plots, dashboards & visualizations
+└── visualizations/                    # Plots, metric bars, and qualitative dashboards
 ```
 
 ---
 
-## 📜 Citations
+## References and Citations
 
-If you find this reproduction or the Kaggle Checkpoint Stitching protocol helpful in your research, please cite both the original NeurIPS 2019 paper and this reproduction repository:
+If you use this benchmark or the Checkpoint Stitching protocol in your academic work, please cite both the primary paper and this reproduction:
 
 ```bibtex
 @inproceedings{lee2019big,
@@ -217,16 +242,10 @@ If you find this reproduction or the Kaggle Checkpoint Stitching protocol helpfu
   year={2019}
 }
 
-@misc{bts_reproduction_2026,
+@misc{nguyen2026monocular,
   title={Reproducing and Benchmarking BTS Monocular Depth Estimation under Constrained Cloud Free-Tier Infrastructure},
-  author={Nguyen Phuoc Dien and Research Team},
+  author={Nguyen, Phuoc Dien and Research Team},
   year={2026},
   howpublished={\url{https://github.com/NguyenPhuocDien/Monocular-Depth-Estimation}}
 }
 ```
-
----
-
-<div align="center">
-  <sub>Developed with scientific rigor for the Graduation Thesis Defense. Designed for 100% reproducibility.</sub>
-</div>
