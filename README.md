@@ -30,47 +30,12 @@ Under strict zero test-time augmentation (zero-TTA) and official crop masks:
 
 ## 2. End-to-End Pipeline & Architecture Flow
 
-The complete dataflow is structured into a streamlined pipeline connecting input image processing, hierarchical feature encoding, multi-scale local planar guidance, optimization checkpointing, and downstream evaluation.
+The complete system architecture and MLOps execution flow are illustrated below, detailing the forward path from input RGB images and optical calibration through hierarchical feature extraction, multi-scale local planar guidance, lossless multi-session checkpoint stitching, and downstream tasks.
 
-```mermaid
-flowchart LR
-    classDef inputNode fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
-    classDef encNode fill:#5b21b6,stroke:#7c3aed,stroke-width:2px,color:#ffffff;
-    classDef lpgNode fill:#065f46,stroke:#10b981,stroke-width:2px,color:#ffffff;
-    classDef outNode fill:#9a3412,stroke:#ea580c,stroke-width:2px,color:#ffffff;
-    classDef evalNode fill:#374151,stroke:#6b7280,stroke-width:2px,color:#ffffff;
-
-    subgraph IN ["Input Stage"]
-        RGB["RGB Image<br/>(B x 3 x H x W)"]:::inputNode
-        CROP["Academic Crop Mask<br/>(Garg / NYU Crop)"]:::inputNode
-        RGB --> CROP
-    end
-
-    subgraph BACKBONE ["Feature Extraction"]
-        CROP --> ENC["DenseNet-161 Encoder"]:::encNode
-        ENC --> F1["Level 1 (H/4, W/4)"]:::encNode
-        ENC --> F2["Level 2 (H/8, W/8)"]:::encNode
-        ENC --> F3["Level 3 (H/16, W/16)"]:::encNode
-        ENC --> F4["Level 4 (H/32, W/32)"]:::encNode
-    end
-
-    subgraph LPG_DECODER ["Local Planar Guidance Decoder"]
-        F2 --> LPG8["LPG @ H/8<br/>Coarse Planes (n, d)"]:::lpgNode
-        F1 --> LPG4["LPG @ H/4<br/>Planar Refinement"]:::lpgNode
-        LPG8 --> LPG4
-        LPG4 --> LPG2["LPG @ H/2<br/>Fine Guidance"]:::lpgNode
-        LPG2 --> LPG1["LPG @ H<br/>Full Resolution"]:::lpgNode
-    end
-
-    subgraph OUTPUT ["Prediction"]
-        LPG1 --> DEPTH["Dense Depth Map D_pred<br/>(B x 1 x H x W)"]:::outNode
-    end
-
-    subgraph SERVING ["Downstream Tasks"]
-        DEPTH --> EVAL["Academic Evaluation<br/>(9 Metrics, Zero-TTA)"]:::evalNode
-        DEPTH --> DEMO["FastAPI Web Demo<br/>(3D Point Cloud & Colormaps)"]:::evalNode
-    end
-```
+<div align="center">
+  <img src="docs/figures/pipeline_architecture.png" width="100%" alt="BTS End-to-End Pipeline and Neural Architecture"/>
+  <p><em>Figure 1: Comprehensive System Architecture and MLOps Checkpoint Stitching Pipeline across 8 Kaggle Sessions (50 Epochs).</em></p>
+</div>
 
 ### Pipeline Stage Specifications
 
@@ -78,7 +43,7 @@ flowchart LR
    - **KITTI (Eigen Split)**: 697 test images evaluated up to $80.0\text{ m}$ cap using Garg crop $[153:371, 44:1197]$.
    - **NYU Depth V2**: 654 test images evaluated up to $10.0\text{ m}$ cap using official NYU crop $[45:471, 41:601]$.
 2. **Dense Feature Extraction**:
-   - DenseNet-161 backbone extracts hierarchical feature representations across four downsampling levels ($1/4, 1/8, 1/16, 1/32$).
+   - DenseNet-161 backbone extracts hierarchical feature representations across four downsampling levels ($1/4, 1/8, 1/16, 1/32$) with channel depths $96, 192, 384$, and $1056$.
 3. **Multi-Scale Local Planar Guidance (LPG)**:
    - Rather than relying on simple bilinear upsampling or deconvolution layers, the LPG module fits explicit 4D tangent plane parameters $(\hat{n}_u, \hat{n}_v, \hat{n}_w, d)$ at resolutions $H/8, H/4, H/2$, and $H$, reconstructing depth through optical geometry.
 4. **Lossless Checkpoint Stitching (Kaggle 2x Tesla T4)**:
@@ -154,12 +119,12 @@ All evaluations use official test splits and standard metrics under single-scale
 
 <div align="center">
   <img src="visualizations/bts_nyuv2_50ep_master_dashboard.png" width="94%" alt="50-Epoch Master Dashboard"/>
-  <p><em>Figure 1: Full 50-Epoch training trajectory, validation loss convergence, and qualitative depth map comparisons.</em></p>
+  <p><em>Figure 2: Full 50-Epoch training trajectory, validation loss convergence, and qualitative depth map comparisons.</em></p>
 </div>
 
 <div align="center">
   <img src="visualizations/bts_nyuv2_metrics_comparison_bar.png" width="85%" alt="Metrics Comparison Bar Chart"/>
-  <p><em>Figure 2: Direct quantitative metric comparison between NeurIPS 2019 paper baseline and our reproduction.</em></p>
+  <p><em>Figure 3: Direct quantitative metric comparison between NeurIPS 2019 paper baseline and our reproduction.</em></p>
 </div>
 
 ---
@@ -237,6 +202,8 @@ Monocular-Depth-Estimation/
 │   └── SCIENTIFIC_CHANGELOG.md        # Engineering transition record
 │
 ├── docs/                              # Academic defense materials
+│   ├── figures/                       # High-resolution vector diagrams & plots
+│   │   └── pipeline_architecture.png  # 4K Architecture & MLOps system diagram
 │   ├── REPORT_FOR_NOTEBOOKLM_AND_DEFENSE.md  # Comprehensive technical report
 │   ├── SLIDES_DEFENSE_PRESENTATION.md         # 12-slide defense script
 │   └── BTS_CURRENT_STATUS_REPORT.md           # Audit status report
